@@ -1,0 +1,6 @@
+{
+  "name": "OHEL",
+  "description": "Plataforma SaaS de gestão de rotina pessoal e institucional baseada na Matriz de Eisenhower.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

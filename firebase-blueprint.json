@@ -1,0 +1,345 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["ADMIN", "MANAGER", "MEMBER"] },
+        "type": { "type": "string" },
+        "institutionId": { "type": "string" },
+        "activeModules": { "type": "array", "items": { "type": "string" } },
+        "phoneNumber": { "type": "string" },
+        "socialMedia": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "themePreference": { "type": "string", "enum": ["light", "dark", "system"] },
+        "isPlatformAdmin": { "type": "boolean" },
+        "lastTaskCreatedAt": { "type": "object" },
+        "burstCount": { "type": "number" },
+        "createdAt": { "type": "object" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A task in the Eisenhower Matrix",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "quadrant": { "type": "string", "enum": ["urgent-important", "important-not-urgent", "urgent-not-important", "not-urgent-not-important"] },
+        "status": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "object" },
+        "moduleId": { "type": "string" },
+        "institutionId": { "type": "string" },
+        "assignedTo": { "type": "array", "items": { "type": "string" } },
+        "visibleToUsers": { "type": "array", "items": { "type": "string" } },
+        "visibility": { "type": "string", "enum": ["PRIVATE", "PUBLIC", "SPECIFIC"] }
+      },
+      "required": ["id", "userId", "title", "quadrant", "status", "completed", "createdAt"]
+    },
+    "InstitutionMember": {
+      "title": "Institution Member",
+      "description": "Membership record in an institution",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "role": { "type": "string", "enum": ["ADMIN", "MANAGER", "MEMBER"] },
+        "joinedAt": { "type": "object" }
+      },
+      "required": ["userId", "role", "joinedAt"]
+    },
+    "Subscription": {
+      "title": "Subscription",
+      "description": "User subscription details",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "planType": { "type": "string" },
+        "status": { "type": "string" },
+        "startDate": { "type": "object" },
+        "expiresAt": { "type": "number" }
+      },
+      "required": ["userId", "planType", "status"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "Record of system actions",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "resource": { "type": "string" },
+        "timestamp": { "type": "object" },
+        "details": { "type": "object" }
+      },
+      "required": ["userId", "action", "resource", "timestamp"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "In-app notification",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "object" }
+      },
+      "required": ["userId", "type", "title", "message", "read", "createdAt"]
+    },
+    "TaskTemplate": {
+      "title": "Task Template",
+      "description": "Reusable task template",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "institutionId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "quadrant": { "type": "string" },
+        "moduleId": { "type": "string" },
+        "type": { "type": "string" },
+        "customFields": { "type": "array" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "title", "quadrant"]
+    },
+    "Mission": {
+      "title": "Mission",
+      "description": "Institutional mission created by manager",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "reward": { "type": "string" },
+        "points": { "type": "number" },
+        "deadline": { "type": "number" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "object" },
+        "status": { "type": "string", "enum": ["ACTIVE", "EXPIRED"] }
+      },
+      "required": ["id", "title", "points", "deadline", "createdBy", "createdAt", "status"]
+    },
+    "MissionCompletion": {
+      "title": "Mission Completion",
+      "description": "Completion record for an institutional mission",
+      "type": "object",
+      "properties": {
+        "missionId": { "type": "string" },
+        "userId": { "type": "string" },
+        "completedAt": { "type": "number" },
+        "status": { "type": "string", "enum": ["PENDING", "AUTHORIZED", "REJECTED"] }
+      },
+      "required": ["missionId", "userId", "completedAt", "status"]
+    },
+    "Ranking": {
+      "title": "Ranking",
+      "description": "Weekly points ranking",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "points": { "type": "number" },
+        "weekId": { "type": "string" }
+      },
+      "required": ["userId", "userName", "points", "weekId"]
+    },
+    "Group": {
+      "title": "User Group",
+      "description": "Functional groups within an institution (e.g., HR, Sales)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "institutionId": { "type": "string" },
+        "members": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "object" }
+      },
+      "required": ["name", "institutionId", "members", "createdAt"]
+    },
+    "LogisticsAddress": {
+      "title": "Logistics Address",
+      "description": "Saved address for logistics and travel time",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "label": { "type": "string" },
+        "address": { "type": "string" },
+        "type": { "type": "string", "enum": ["WORK", "HOME", "DELIVERY", "OTHER"] }
+      },
+      "required": ["id", "userId", "label", "address", "type"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Chat message",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "groupId": { "type": "string" },
+        "taskId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "object" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "senderId", "senderName", "text", "createdAt", "read"]
+    },
+    "Institution": {
+      "title": "Institution",
+      "description": "Organizational entity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "inviteCode": { "type": "string" },
+        "membersCount": { "type": "number" },
+        "planType": { "type": "string" },
+        "trialEndsAt": { "type": "number" },
+        "subscriptionStatus": { "type": "string" },
+        "hasAdminDiscount": { "type": "boolean" }
+      },
+      "required": ["id", "name", "planType"]
+    },
+    "FitnessHabit": {
+      "title": "Fitness Habit",
+      "description": "Water, exercise or habit tracker",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["WATER", "EXERCISE", "HABIT"] },
+        "target": { "type": "number" },
+        "current": { "type": "number" },
+        "date": { "type": "string" }
+      },
+      "required": ["userId", "name", "type", "target", "current", "date"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Private user profile"
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "User tasks"
+    },
+    "/institutions/{institutionId}": {
+      "schema": "Institution",
+      "description": "Institution data"
+    },
+    "/institutions/{institutionId}/members/{userId}": {
+      "schema": "InstitutionMember",
+      "description": "Institution membership"
+    },
+    "/subscriptions/{userId}": {
+      "schema": "Subscription",
+      "description": "User subscription"
+    },
+    "/audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "System audit logs"
+    },
+    "/finance_transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Financial records"
+    },
+    "/personal_finance/{id}": {
+      "schema": "Transaction",
+      "description": "Personal finance entries"
+    },
+    "/pix_keys/{id}": {
+      "schema": "PixKey",
+      "description": "Saved PIX payment keys"
+    },
+    "/spiritual_devotionals/{devotionalId}": {
+      "schema": "Devotional",
+      "description": "Daily devotional records"
+    },
+    "/spiritual_goals/{id}": {
+      "schema": "SpiritualGoal",
+      "description": "Personal spiritual goals"
+    },
+    "/spiritual_reading_plans/{id}": {
+      "schema": "ReadingPlan",
+      "description": "Bible reading plans"
+    },
+    "/fitness_habits/{habitId}": {
+      "schema": "FitnessHabit",
+      "description": "Daily fitness and water tracking"
+    },
+    "/wellbeing_logs/{logId}": {
+      "schema": "WellBeingLog",
+      "description": "Daily mood and energy tracking"
+    },
+    "/library_items/{id}": {
+      "schema": "LibraryItem",
+      "description": "Books, media and library resources"
+    },
+    "/personal_family/{id}": {
+      "schema": "FamilyEvent",
+      "description": "Family events and routine items"
+    },
+    "/personal_album/{albumId}": {
+      "schema": "AlbumPhoto",
+      "description": "Family photo album items"
+    },
+    "/personal_documents/{docId}": {
+      "schema": "PersonalDocument",
+      "description": "Secure stored documents"
+    },
+    "/task_templates/{templateId}": {
+      "schema": "TaskTemplate",
+      "description": "Reusable customizable task templates"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    },
+    "/missions/{missionId}": {
+      "schema": "Mission",
+      "description": "Institutional missions"
+    },
+    "/mission_completions/{completionId}": {
+      "schema": "MissionCompletion",
+      "description": "Mission completion submissions"
+    },
+    "/rankings/{rankingId}": {
+      "schema": "Ranking",
+      "description": "Weekly rankings"
+    },
+    "/logistics_addresses/{addressId}": {
+      "schema": "LogisticsAddress",
+      "description": "User saved addresses"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Chat messages"
+    },
+    "/groups/{groupId}": {
+      "schema": "Group",
+      "description": "Institutional groups"
+    },
+    "/config/{configId}": {
+      "schema": "Config",
+      "description": "Global application configuration"
+    },
+    "/settings/{settingId}": {
+      "schema": "Setting",
+      "description": "Appearance and institutional settings"
+    }
+  }
+}

@@ -1,0 +1,660 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // --- Core identity helpers ---
+    // ============================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Platform Admin (root) verification.
+    function isPlatformAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.get('email', '') in ['marcelle.gomesvieira.ayres@gmail.com', 'admin@ohel.app']) ||
+        request.auth.token.get('admin', false) == true ||
+        request.auth.token.get('isPlatformAdmin', false) == true ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && (request.auth.uid == userId || isPlatformAdmin());
+    }
+
+    function isVerified() {
+      return isSignedIn() && (
+        request.auth.token.get('email_verified', false) == true ||
+        isPlatformAdmin()
+      );
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // ============================================================
+    // --- Institution membership & roles ---
+    // A role can differ per institution for the same person (e.g. ADMIN of
+    // the church, plain MEMBER of someone else's institution), so role is
+    // ALWAYS read from institutions/{id}/members/{uid} — NEVER from a single
+    // token claim. The legacy `institutionId` token claim is kept only as a
+    // fallback for MEMBERSHIP (yes/no), never for role, so old sessions
+    // issued before this migration don't get locked out mid-transition.
+    // ============================================================
+    function institutionMemberPath(institutionId) {
+      return /databases/$(database)/documents/institutions/$(institutionId)/members/$(request.auth.uid);
+    }
+
+    function isMemberOf(institutionId) {
+      return isSignedIn() && institutionId != null && isValidId(institutionId) && (
+        isPlatformAdmin() ||
+        request.auth.token.get('institutionId', '') == institutionId ||
+        (exists(institutionMemberPath(institutionId)) &&
+         get(institutionMemberPath(institutionId)).data.get('status', 'ACTIVE') == 'ACTIVE')
+      );
+    }
+
+    function institutionRoleOf(institutionId) {
+      return get(institutionMemberPath(institutionId)).data.get('role', 'MEMBER');
+    }
+
+    function isManagerOf(institutionId) {
+      return isSignedIn() && institutionId != null && (
+        isPlatformAdmin() ||
+        (isMemberOf(institutionId) && institutionRoleOf(institutionId) in ['ADMIN', 'MANAGER'])
+      );
+    }
+
+    function isAdminOf(institutionId) {
+      return isSignedIn() && institutionId != null && (
+        isPlatformAdmin() ||
+        (isMemberOf(institutionId) && institutionRoleOf(institutionId) == 'ADMIN')
+      );
+    }
+
+    function isDelegatedTask(data) {
+      return (data.get('assignedTo', []) is list && data.get('assignedTo', []).size() > 0) ||
+             (data.get('assignedToGroups', []) is list && data.get('assignedToGroups', []).size() > 0);
+    }
+
+    function institutionRequiresApproval(institutionId) {
+      return exists(/databases/$(database)/documents/institutions/$(institutionId)) &&
+        get(/databases/$(database)/documents/institutions/$(institutionId)).data.get('taskApprovalRequired', false) == true;
+    }
+
+    // ============================================================
+    // --- Household membership & permissions ---
+    // Same non-token-claim principle as institutions: a person can be
+    // OWNER of their own household and a plain member/profile of someone
+    // else's, so this is always a subcollection lookup.
+    // `permissions` on the member doc must be written explicitly by the app
+    // at join time (derived client-side from HOUSEHOLD_ROLE_DEFAULTS) —
+    // rules never hardcode role -> permission defaults.
+    // ============================================================
+    function householdMemberPath(householdId) {
+      return /databases/$(database)/documents/households/$(householdId)/members/$(request.auth.uid);
+    }
+
+    function isHouseholdMemberOf(householdId) {
+      return isSignedIn() && householdId != null && isValidId(householdId) && (
+        isPlatformAdmin() ||
+        (exists(householdMemberPath(householdId)) &&
+         get(householdMemberPath(householdId)).data.get('status', 'ACTIVE') == 'ACTIVE')
+      );
+    }
+
+    function hasHouseholdPermission(householdId, permission) {
+      return isHouseholdMemberOf(householdId) && (
+        isPlatformAdmin() ||
+        permission in get(householdMemberPath(householdId)).data.get('permissions', [])
+      );
+    }
+
+    // ============================================================
+    // --- Generic context helpers (Task and every pillar collection) ---
+    // ============================================================
+    function isContextMember(contextType, contextId) {
+      return contextType == 'PERSONAL' ||
+        (contextType == 'HOUSEHOLD' && isHouseholdMemberOf(contextId)) ||
+        (contextType == 'INSTITUTION' && isMemberOf(contextId));
+    }
+
+    // planType actually paying for the given context, read from the
+    // Household/Institution doc itself (never from a per-member field).
+    function contextPlanType(contextType, contextId) {
+      return contextType == 'HOUSEHOLD'
+        ? get(/databases/$(database)/documents/households/$(contextId)).data.get('planType', 'PERSONAL_BASIC')
+        : get(/databases/$(database)/documents/institutions/$(contextId)).data.get('planType', 'INSTITUTION_BASIC');
+    }
+
+    function contextHasPlusFeature(contextType, contextId) {
+      return contextType == 'PERSONAL' ||
+        contextPlanType(contextType, contextId) in ['PERSONAL_PLUS', 'INSTITUTION_PLUS'];
+    }
+
+    // ============================================================
+    // --- Ad-hoc, time-boxed external pillar sharing ---
+    // Doc id convention: `${ownerId}_${targetUserId}_${pillar}` so this is a
+    // single get(), no query, same zero-fan-out cost as membership checks.
+    // ============================================================
+    function hasActivePillarConnection(ownerId, pillar) {
+      let connId = ownerId + '_' + request.auth.uid + '_' + pillar;
+      let path = /databases/$(database)/documents/pillar_connections/$(connId);
+      return exists(path) &&
+        get(path).data.status == 'ACTIVE' &&
+        get(path).data.expiresAt > request.time;
+    }
+
+    // Shared read rule for every "personal pillar" collection: owner, OR
+    // shared with the whole household/institution context, OR shared with
+    // specific people, OR granted through a temporary external connection.
+    // NOTE: group-scoped sharing (visibleToGroups) is intentionally NOT
+    // included here yet — checking "is this uid in any of these groups'
+    // member arrays" cannot be done cheaply in rules without denormalizing
+    // group membership onto the user doc first. Task keeps its own
+    // (pre-existing, narrower) visibility handling below. Follow-up needed
+    // before group-based sharing is exposed for other pillars in the UI.
+    function canReadPillarDoc(data, pillar) {
+      return isOwner(data.userId) ||
+        (data.get('visibility', 'PRIVATE') == 'PUBLIC' &&
+         isContextMember(data.get('contextType', 'PERSONAL'), data.get('contextId', null))) ||
+        (data.get('visibility', 'PRIVATE') == 'SPECIFIC' &&
+         request.auth.uid in data.get('visibleToUsers', [])) ||
+        hasActivePillarConnection(data.userId, pillar);
+    }
+
+    function canWritePillarDoc(data) {
+      return isOwner(data.userId) ||
+        (data.get('contextType', 'PERSONAL') == 'HOUSEHOLD' &&
+         hasHouseholdPermission(data.contextId, 'ASSIGN_TASKS_TO_OTHERS')) ||
+        (data.get('contextType', 'PERSONAL') == 'INSTITUTION' &&
+         isManagerOf(data.contextId));
+    }
+
+    // ============================================================
+    // --- Schema Validators ---
+    // ============================================================
+    function isValidUser(data) {
+      return data.id is string &&
+             data.name is string && data.name.size() <= 200 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.role in ['ADMIN', 'MANAGER', 'MEMBER'] &&
+             (!('institutionId' in data) || (data.institutionId is string || data.institutionId == null)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1048576)) &&
+             (!('themePreference' in data) || (data.themePreference in ['light', 'dark', 'system'])) &&
+             (!('activeModules' in data) || (data.activeModules is list)) &&
+             (!('phoneNumber' in data) || (data.phoneNumber is string || data.phoneNumber == null)) &&
+             (!('socialMedia' in data) || (data.socialMedia is string || data.socialMedia == null)) &&
+             (!('type' in data) || (data.type in ['personal', 'institution_owner', 'institution_member'])) &&
+             (!('profileType' in data) || (data.profileType in ['PERSONAL', 'INSTITUTIONAL']));
+    }
+
+    function isValidTask(data) {
+      return data.userId is string &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 300 &&
+             data.quadrant in ['urgent-important', 'important-not-urgent', 'urgent-not-important', 'not-urgent-not-important'] &&
+             data.status is string &&
+             data.completed is bool &&
+             data.get('contextType', 'PERSONAL') in ['PERSONAL', 'HOUSEHOLD', 'INSTITUTION'];
+    }
+
+    function isValidMissionCompletion(data) {
+      return data.missionId is string &&
+             data.userId == request.auth.uid &&
+             data.status in ['PENDING', 'AUTHORIZED', 'REJECTED'] &&
+             data.completedAt is number;
+    }
+
+    function isValidLogisticsAddress(data) {
+      return data.userId == request.auth.uid &&
+             data.label is string && data.label.size() > 0 && data.label.size() <= 100 &&
+             data.address is string && data.address.size() > 0 && data.address.size() <= 300 &&
+             data.type in ['WORK', 'HOME', 'DELIVERY', 'OTHER'];
+    }
+
+    function isValidMessage(data) {
+      return data.senderId == request.auth.uid &&
+             data.senderName is string &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 2000 &&
+             data.read is bool;
+    }
+
+    function isValidTemplate(data) {
+      return data.userId is string &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.quadrant is string;
+    }
+
+    // ============================================================
+    // --- Core Collections ---
+    // ============================================================
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && (
+        request.auth.uid == userId ||
+        isPlatformAdmin() ||
+        (resource.data.get('institutionId', null) != null && isMemberOf(resource.data.institutionId))
+      );
+      allow list: if isSignedIn() && (
+        isPlatformAdmin() ||
+        (resource.data.get('institutionId', null) != null && isMemberOf(resource.data.institutionId))
+      );
+      allow create: if isSignedIn() && (request.auth.uid == userId || isPlatformAdmin());
+      // NOTE: isManager() here used to be the single global-claim check; a
+      // cross-institution manager should not be able to edit any user's
+      // profile. Kept to platform-admin + self until per-institution-scoped
+      // profile editing (e.g. changing someone's group) is modeled as its
+      // own, narrower operation.
+      allow update: if isSignedIn() && (request.auth.uid == userId || isPlatformAdmin());
+      allow delete: if isPlatformAdmin();
+    }
+
+    // Households Collection & Subcollections
+    match /households/{householdId} {
+      allow read: if isHouseholdMemberOf(householdId);
+      allow create: if isVerified() && isValidId(householdId) && incoming().ownerId == request.auth.uid;
+      allow update: if isVerified() && (isPlatformAdmin() || hasHouseholdPermission(householdId, 'MANAGE_MEMBERS'));
+      allow delete: if isPlatformAdmin() || (isVerified() && existing().ownerId == request.auth.uid);
+
+      match /members/{memberId} {
+        allow read: if isHouseholdMemberOf(householdId);
+        // A person can create/accept their own membership doc (invite flow);
+        // otherwise only someone who can already manage members may write.
+        allow create: if isVerified() && (
+          isPlatformAdmin() ||
+          request.auth.uid == memberId ||
+          hasHouseholdPermission(householdId, 'MANAGE_MEMBERS')
+        );
+        allow update, delete: if isVerified() && (
+          isPlatformAdmin() ||
+          request.auth.uid == memberId ||
+          hasHouseholdPermission(householdId, 'MANAGE_MEMBERS')
+        );
+      }
+    }
+
+    // Tasks Collection
+    match /tasks/{taskId} {
+      allow read: if isPlatformAdmin() || (
+        isSignedIn() && (
+          resource.data.userId == request.auth.uid ||
+          resource.data.get('assignedBy', null) == request.auth.uid ||
+          (resource.data.get('assignedTo', []) is list && request.auth.uid in resource.data.assignedTo) ||
+          (resource.data.get('visibleToUsers', []) is list && request.auth.uid in resource.data.visibleToUsers) ||
+          (resource.data.get('contextType', 'PERSONAL') == 'HOUSEHOLD' &&
+           isHouseholdMemberOf(resource.data.get('contextId', null))) ||
+          (resource.data.get('contextType', 'PERSONAL') == 'INSTITUTION' &&
+           resource.data.get('visibility', 'PUBLIC') == 'PUBLIC' &&
+           isMemberOf(resource.data.get('contextId', null))) ||
+          (resource.data.get('contextType', 'PERSONAL') == 'INSTITUTION' &&
+           isManagerOf(resource.data.get('contextId', null)))
+        )
+      );
+      allow create: if isVerified() &&
+                    isValidId(taskId) &&
+                    isValidTask(incoming()) &&
+                    incoming().userId == request.auth.uid && // creator field is ALWAYS self in this app's data model — delegation is expressed via assignedTo/assignedToGroups, never by changing userId
+                    isContextMember(incoming().get('contextType', 'PERSONAL'), incoming().get('contextId', null)) &&
+                    (
+                      isPlatformAdmin() ||
+                      !isDelegatedTask(incoming()) ||
+                      // Delegating onto someone else's calendar (assignedTo/assignedToGroups non-empty)
+                      // needs its own check — NOT the `userId == self` clause above, which is trivially
+                      // true for every task this app creates and therefore can't gate anything by itself.
+                      (
+                        incoming().get('assignedBy', null) == request.auth.uid &&
+                        (
+                          (incoming().contextType == 'HOUSEHOLD' &&
+                           hasHouseholdPermission(incoming().contextId, 'ASSIGN_TASKS_TO_OTHERS')) ||
+                          (incoming().contextType == 'INSTITUTION' &&
+                           isMemberOf(incoming().contextId) &&
+                           (
+                             !institutionRequiresApproval(incoming().contextId) ||
+                             incoming().status == 'PENDING_APPROVAL'
+                           ))
+                        )
+                      )
+                    );
+      allow update: if isVerified() &&
+                    isValidId(taskId) &&
+                    isValidTask(incoming()) &&
+                    (
+                      isPlatformAdmin() ||
+                      existing().userId == request.auth.uid ||
+                      existing().get('assignedBy', null) == request.auth.uid ||
+                      (existing().get('assignedTo', []) is list && request.auth.uid in existing().assignedTo) ||
+                      (existing().get('contextType', 'PERSONAL') == 'INSTITUTION' &&
+                       isManagerOf(existing().get('contextId', null))) ||
+                      (existing().get('contextType', 'PERSONAL') == 'HOUSEHOLD' &&
+                       hasHouseholdPermission(existing().get('contextId', null), 'APPROVE_TASKS'))
+                    );
+      allow delete: if isVerified() &&
+                    isValidId(taskId) &&
+                    (
+                      isPlatformAdmin() ||
+                      existing().userId == request.auth.uid ||
+                      (existing().get('contextType', 'PERSONAL') == 'INSTITUTION' &&
+                       isManagerOf(existing().get('contextId', null)))
+                    );
+    }
+
+    // Institutions Collection & Subcollections
+    match /institutions/{institutionId} {
+      allow read: if isSignedIn();
+      allow create: if isVerified() && (isPlatformAdmin() || (isValidId(institutionId) && incoming().ownerId == request.auth.uid));
+      allow update: if isVerified() && (isPlatformAdmin() || isAdminOf(institutionId));
+      allow delete: if isPlatformAdmin() || (isVerified() && existing().ownerId == request.auth.uid);
+
+      match /members/{memberId} {
+        allow read: if isSignedIn();
+        // A person can create their own PENDING membership doc via a valid
+        // invite token (validated server-side by /api/invite/validate before
+        // this write happens); role escalation is never self-service.
+        allow create: if isVerified() && (
+          isPlatformAdmin() ||
+          isAdminOf(institutionId) ||
+          (request.auth.uid == memberId && incoming().role == 'MEMBER')
+        );
+        allow update, delete: if isVerified() && (isPlatformAdmin() || isAdminOf(institutionId));
+      }
+    }
+
+    // Admins Collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isPlatformAdmin();
+    }
+
+    // Subscriptions Collection (per paying owner; the CONTEXT's planType on
+    // households/{id} or institutions/{id} is what everything else reads)
+    match /subscriptions/{userId} {
+      allow read: if isPlatformAdmin() || isOwner(userId);
+      allow write: if isPlatformAdmin() || isOwner(userId);
+    }
+
+    // System Audit Logs
+    match /audit_logs/{logId} {
+      allow read: if isPlatformAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if isPlatformAdmin();
+    }
+
+    // Notifications Collection
+    match /notifications/{notificationId} {
+      allow read: if isPlatformAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
+      // Self-notify is always fine. Notifying someone ELSE requires the
+      // sender to declare which shared household/institution justifies it,
+      // and to actually belong to that context — closes the previous
+      // "anyone signed in can create" hole.
+      allow create: if isVerified() && (
+        isPlatformAdmin() ||
+        incoming().userId == request.auth.uid ||
+        (
+          incoming().get('senderId', null) == request.auth.uid &&
+          (
+            (incoming().get('contextType', null) == 'HOUSEHOLD' && isHouseholdMemberOf(incoming().contextId)) ||
+            (incoming().get('contextType', null) == 'INSTITUTION' && isMemberOf(incoming().contextId))
+          )
+        )
+      );
+      allow update: if isPlatformAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
+      allow delete: if isPlatformAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
+    }
+
+    // Chat Messages — scoped to actual participants, not a global manager claim.
+    match /messages/{messageId} {
+      allow read: if isPlatformAdmin() || (
+        isSignedIn() && (
+          existing().senderId == request.auth.uid ||
+          existing().receiverId == request.auth.uid ||
+          (existing().get('taskId', null) != null &&
+           exists(/databases/$(database)/documents/tasks/$(existing().taskId)) &&
+           (
+             get(/databases/$(database)/documents/tasks/$(existing().taskId)).data.userId == request.auth.uid ||
+             get(/databases/$(database)/documents/tasks/$(existing().taskId)).data.get('assignedBy', null) == request.auth.uid ||
+             request.auth.uid in get(/databases/$(database)/documents/tasks/$(existing().taskId)).data.get('assignedTo', []) ||
+             (get(/databases/$(database)/documents/tasks/$(existing().taskId)).data.get('contextType', 'PERSONAL') == 'INSTITUTION' &&
+              isManagerOf(get(/databases/$(database)/documents/tasks/$(existing().taskId)).data.get('contextId', null)))
+           )) ||
+          (existing().get('groupId', null) != null &&
+           exists(/databases/$(database)/documents/groups/$(existing().groupId)) &&
+           request.auth.uid in get(/databases/$(database)/documents/groups/$(existing().groupId)).data.get('members', []))
+        )
+      );
+      allow create: if isVerified() && isValidMessage(incoming()) && (
+        isPlatformAdmin() || incoming().senderId == request.auth.uid
+      );
+      allow update: if isVerified() && (
+        isPlatformAdmin() ||
+        existing().senderId == request.auth.uid ||
+        existing().receiverId == request.auth.uid
+      );
+      allow delete: if isVerified() && (
+        isPlatformAdmin() || existing().senderId == request.auth.uid
+      );
+    }
+
+    // Missions Collection — scoped to the institution that created them.
+    match /missions/{missionId} {
+      allow read: if isPlatformAdmin() || (
+        isSignedIn() && existing().get('institutionId', null) != null && isMemberOf(existing().institutionId)
+      );
+      allow create: if isVerified() && isValidId(missionId) &&
+                    incoming().get('institutionId', null) != null &&
+                    isManagerOf(incoming().institutionId);
+      allow update, delete: if isVerified() && (
+        isPlatformAdmin() ||
+        (existing().get('institutionId', null) != null && isManagerOf(existing().institutionId))
+      );
+    }
+
+    // Mission Completions Collection
+    match /mission_completions/{completionId} {
+      allow read: if isPlatformAdmin() || (isSignedIn() && (existing().userId == request.auth.uid));
+      allow create: if isVerified() && isValidMissionCompletion(incoming());
+      allow update: if isVerified() && (
+        isPlatformAdmin() ||
+        (existing().userId == request.auth.uid && incoming().userId == existing().userId)
+      );
+      allow delete: if isPlatformAdmin();
+    }
+
+    // Rankings — scoped per household/institution context, never mixed.
+    // Points are written server-side (Admin SDK bypasses these rules) to
+    // prevent a client from just writing itself to the top of the board;
+    // clients may only READ, scoped to a context they belong to.
+    match /rankings/{rankingId} {
+      allow read: if isPlatformAdmin() || (
+        isSignedIn() && isContextMember(existing().get('contextType', 'PERSONAL'), existing().get('contextId', null))
+      );
+      allow write: if isPlatformAdmin();
+    }
+
+    // Institutional Groups
+    match /groups/{groupId} {
+      allow read: if isPlatformAdmin() || (
+        isSignedIn() &&
+        existing().get('institutionId', null) != null && isMemberOf(existing().institutionId)
+      );
+      allow write: if isVerified() && (
+        isPlatformAdmin() ||
+        (existing().get('institutionId', null) != null
+          ? isManagerOf(existing().institutionId)
+          : isManagerOf(incoming().institutionId))
+      );
+    }
+
+    // Global Configuration
+    match /config/{configId} {
+      allow read: if isSignedIn();
+      allow write: if isPlatformAdmin();
+    }
+
+    // System & Appearance Settings
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isPlatformAdmin();
+    }
+
+    // Task Templates — Plus feature only.
+    match /task_templates/{templateId} {
+      allow read: if isSignedIn();
+      allow create: if isVerified() && isValidTemplate(incoming()) && (
+        isPlatformAdmin() ||
+        (
+          isOwner(incoming().userId) &&
+          contextHasPlusFeature(incoming().get('contextType', 'PERSONAL'), incoming().get('contextId', null))
+        ) ||
+        (incoming().get('institutionId', null) != null && isManagerOf(incoming().institutionId) &&
+         contextHasPlusFeature('INSTITUTION', incoming().institutionId))
+      );
+      allow update: if isVerified() && isValidTemplate(incoming()) && (isPlatformAdmin() || isOwner(existing().userId) || isManagerOf(existing().get('institutionId', null)));
+      allow delete: if isVerified() && (isPlatformAdmin() || isOwner(existing().userId) || isManagerOf(existing().get('institutionId', null)));
+    }
+
+    // Pillar Connections (temporary external sharing)
+    match /pillar_connections/{connectionId} {
+      allow read: if isPlatformAdmin() || (
+        isSignedIn() && (existing().ownerId == request.auth.uid || existing().targetUserId == request.auth.uid)
+      );
+      // Doc id must be `${ownerId}_${targetUserId}_${pillar}` — enforced
+      // here so a client can't create a connection under someone else's id.
+      allow create: if isVerified() &&
+                    incoming().ownerId == request.auth.uid &&
+                    connectionId == incoming().ownerId + '_' + incoming().targetUserId + '_' + incoming().pillar &&
+                    incoming().scope == 'READ_ONLY' &&
+                    incoming().status == 'PENDING' &&
+                    incoming().expiresAt is number && incoming().expiresAt > request.time;
+      // Owner can revoke any time; target user can only accept (PENDING -> ACTIVE).
+      allow update: if isVerified() && (
+        isPlatformAdmin() ||
+        existing().ownerId == request.auth.uid ||
+        (existing().targetUserId == request.auth.uid &&
+         existing().status == 'PENDING' && incoming().status == 'ACTIVE')
+      );
+      allow delete: if isVerified() && (isPlatformAdmin() || existing().ownerId == request.auth.uid);
+    }
+
+    // ============================================================
+    // --- Personal & Pillar Subsystems ---
+    // Generalized: private by default, opt-in shareable per record via
+    // canReadPillarDoc()/canWritePillarDoc() (see helpers above).
+    // ============================================================
+
+    match /finance_transactions/{id} {
+      allow read: if isPlatformAdmin() || canReadPillarDoc(existing(), 'FINANCEIRO');
+      allow create: if isVerified() && (isOwner(incoming().userId) || canWritePillarDoc(incoming()));
+      allow update: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+      allow delete: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+    }
+
+    match /personal_finance/{id} {
+      allow read: if isPlatformAdmin() || canReadPillarDoc(existing(), 'FINANCEIRO');
+      allow create: if isVerified() && (isOwner(incoming().userId) || canWritePillarDoc(incoming()));
+      allow update: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+      allow delete: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+    }
+
+    match /pix_keys/{id} {
+      allow read: if isPlatformAdmin() || isOwner(existing().userId);
+      allow create: if isVerified() && isOwner(incoming().userId);
+      allow update: if isVerified() && isOwner(existing().userId);
+      allow delete: if isVerified() && isOwner(existing().userId);
+    }
+
+    match /spiritual_devotionals/{id} {
+      allow read: if isPlatformAdmin() || canReadPillarDoc(existing(), 'ESPIRITUAL');
+      allow create: if isVerified() && (isOwner(incoming().userId) || canWritePillarDoc(incoming()));
+      allow update: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+      allow delete: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+    }
+
+    match /spiritual_reading_plans/{id} {
+      allow read: if isPlatformAdmin() || canReadPillarDoc(existing(), 'ESPIRITUAL');
+      allow create: if isVerified() && (isOwner(incoming().userId) || canWritePillarDoc(incoming()));
+      allow update: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+      allow delete: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+    }
+
+    match /spiritual_goals/{id} {
+      allow read: if isPlatformAdmin() || canReadPillarDoc(existing(), 'ESPIRITUAL');
+      allow create: if isVerified() && (isOwner(incoming().userId) || canWritePillarDoc(incoming()));
+      allow update: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+      allow delete: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+    }
+
+    match /fitness_habits/{id} {
+      allow read: if isPlatformAdmin() || canReadPillarDoc(existing(), 'PESSOAL');
+      allow create: if isVerified() && (isOwner(incoming().userId) || canWritePillarDoc(incoming()));
+      allow update: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+      allow delete: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+    }
+
+    // Well-being Logs stay strictly private — mental health / mood journal
+    // data is never included in household/institution sharing, only in the
+    // explicit time-boxed external connection (e.g. a caregiver).
+    match /wellbeing_logs/{id} {
+      allow read: if isPlatformAdmin() || isOwner(existing().userId) || hasActivePillarConnection(existing().userId, 'PESSOAL');
+      allow create: if isVerified() && isOwner(incoming().userId);
+      allow update: if isVerified() && isOwner(existing().userId);
+      allow delete: if isVerified() && isOwner(existing().userId);
+    }
+
+    match /library_items/{id} {
+      allow read: if isPlatformAdmin() || isOwner(existing().userId);
+      allow create: if isVerified() && isOwner(incoming().userId);
+      allow update: if isVerified() && isOwner(existing().userId);
+      allow delete: if isVerified() && isOwner(existing().userId);
+    }
+
+    match /personal_family/{id} {
+      allow read: if isPlatformAdmin() || canReadPillarDoc(existing(), 'FAMILIAR');
+      allow create: if isVerified() && (isOwner(incoming().userId) || canWritePillarDoc(incoming()));
+      allow update: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+      allow delete: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+    }
+
+    // Family Album — Plus feature only.
+    match /personal_album/{id} {
+      allow read: if isPlatformAdmin() || canReadPillarDoc(existing(), 'FAMILIAR');
+      allow create: if isVerified() &&
+                    contextHasPlusFeature(incoming().get('contextType', 'PERSONAL'), incoming().get('contextId', null)) &&
+                    (isOwner(incoming().userId) || canWritePillarDoc(incoming()));
+      allow update: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+      allow delete: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+    }
+
+    // Personal Documents — attachments are a Plus feature only.
+    match /personal_documents/{id} {
+      allow read: if isPlatformAdmin() || canReadPillarDoc(existing(), 'FAMILIAR');
+      allow create: if isVerified() &&
+                    contextHasPlusFeature(incoming().get('contextType', 'PERSONAL'), incoming().get('contextId', null)) &&
+                    (isOwner(incoming().userId) || canWritePillarDoc(incoming()));
+      allow update: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+      allow delete: if isVerified() && (isOwner(existing().userId) || canWritePillarDoc(existing()));
+    }
+
+    match /logistics_addresses/{id} {
+      allow read: if isPlatformAdmin() || isOwner(existing().userId);
+      allow create: if isVerified() && isValidLogisticsAddress(incoming());
+      allow update: if isVerified() && isOwner(existing().userId);
+      allow delete: if isVerified() && isOwner(existing().userId);
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

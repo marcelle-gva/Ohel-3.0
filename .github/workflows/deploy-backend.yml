@@ -1,0 +1,18 @@
+name: Deploy Backend
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server.ts'
+      - 'package.json'
+      - 'render.yaml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Render
+        run: |
+          curl -X POST https://api.render.com/deploy/${{ secrets.RENDER_SERVICE_ID }}?key=${{ secrets.RENDER_API_KEY }}

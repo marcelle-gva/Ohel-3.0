@@ -1,0 +1,15 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "rankings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "contextType", "order": "ASCENDING" },
+        { "fieldPath": "contextId", "order": "ASCENDING" },
+        { "fieldPath": "weekId", "order": "ASCENDING" },
+        { "fieldPath": "points", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
