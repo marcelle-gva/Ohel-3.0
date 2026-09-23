@@ -441,7 +441,7 @@ export default function App() {
 
   const currentPlan = resolvePlanType(subscription?.planType);
   const limits = getPlanLimits(currentPlan);
-  const isLimitReached = tasks.length >= limits.tasks;
+  const isLimitReached = tasks.length >= (limits?.tasks ?? Infinity);
 
   // Firestore Real-time Sync
   const [messages, setMessages] = useState<Message[]>([]);
