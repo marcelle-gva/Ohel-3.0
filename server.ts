@@ -567,10 +567,26 @@ if (!admin.apps.length) {
       } else {
         console.warn('FIREBASE_SERVICE_ACCOUNT is set but does not contain valid JSON (e.g. {"type": "service_account", ...}). Running in fallback mode.');
       }
+    } else if (
+      process.env.FIREBASE_CLIENT_EMAIL &&
+      process.env.FIREBASE_PRIVATE_KEY &&
+      process.env.FIREBASE_PROJECT_ID
+    ) {
+      const serviceAccount = {
+        type: 'service_account',
+        project_id: process.env.FIREBASE_PROJECT_ID,
+        private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      };
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+      });
+      firebaseAdminAvailable = true;
+      console.log('Firebase Admin initialized with separate env vars (email/key/project).');
     } else {
       console.log('Firebase Admin: Running without service account credentials in dev container.');
     }
-  } catch (error) {
+    } catch (error) {
     console.warn('Firebase Admin initialization skipped or failed:', error);
   }
 } else {
