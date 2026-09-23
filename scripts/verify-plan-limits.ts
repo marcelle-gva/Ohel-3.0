@@ -2,7 +2,7 @@
  * One-shot check for getPlanLimits / resolvePlanType.
  * Run: npx tsx scripts/verify-plan-limits.ts
  */
-import { getPlanLimits, resolvePlanType, PLAN_LIMITS } from '../src/types.ts';
+import { getPlanLimits, resolvePlanType, PLAN_LIMITS } from '../src/types';
 
 function assert(condition: unknown, message: string) {
   if (!condition) {

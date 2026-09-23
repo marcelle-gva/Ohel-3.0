@@ -1,3 +1,5 @@
+import type React from 'react';
+
 // Colors here are the 700-weight of the same hue already used for each
 // pillar's icon in OrdemNoCaos.tsx (which uses the 500-weight as a tinted
 // icon color, e.g. `text-purple-500` on a `bg-purple-500/10` chip — that

@@ -13,6 +13,14 @@ import rateLimit from 'express-rate-limit';
 import { StreamClient } from '@stream-io/node-sdk';
 import { GoogleGenAI, Type } from '@google/genai';
 
+declare global {
+  namespace Express {
+    interface Request {
+      auth?: { userId?: string; [key: string]: any };
+    }
+  }
+}
+
 dotenv.config();
 
 // Helper function: High-grade heuristic NLP fallback when Gemini API key is offline or quota reached
@@ -1066,7 +1074,7 @@ async function startServer() {
       }
 
       const now = new Date();
-      const weekId = `${now.getFullYear()}-W${String(Math.ceil((((now as any) - new Date(now.getFullYear(), 0, 1) as any) / 86400000 + new Date(now.getFullYear(), 0, 1).getDay() + 1) / 7)).padStart(2, '0')}`;
+      const weekId = `${now.getFullYear()}-W${String(Math.ceil(((Number(now) - Number(new Date(now.getFullYear(), 0, 1))) / 86400000 + new Date(now.getFullYear(), 0, 1).getDay() + 1) / 7)).padStart(2, '0')}`;
       const rankingId = `${contextType}_${contextId}_${userId}_${weekId}`;
 
       const userDoc = await db.collection('users').doc(userId).get();
