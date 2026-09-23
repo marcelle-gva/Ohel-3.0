@@ -24,4 +24,4 @@ services:
         sync: false
       - key: FRONTEND_URL
         value: https://app.ohel.app
-    healthCheckPath: /health
+    healthCheckPath: /api/health
