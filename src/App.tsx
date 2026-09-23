@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Task, EisenhowerQuadrant, Module, Institution, User, UserGroup, MODULES, PLAN_LIMITS, PlanType, Mission, Ranking, LogisticsAddress, Message, QUADRANT_LABELS, Comment, TaskTemplate, FamilyEvent } from '@/types';
+import { Task, EisenhowerQuadrant, Module, Institution, User, UserGroup, MODULES, Mission, Ranking, LogisticsAddress, Message, QUADRANT_LABELS, Comment, TaskTemplate, FamilyEvent, getPlanLimits, resolvePlanType } from '@/types';
 import { EisenhowerMatrix } from '@/components/EisenhowerMatrix';
 import { TaskForm } from '@/components/TaskForm';
 import { TaskDetails } from '@/components/TaskDetails';
@@ -439,9 +439,9 @@ export default function App() {
     return localStorage.getItem('isSidebarCollapsed') === 'true';
   });
 
-  const currentPlan = (subscription?.planType as PlanType) || 'BASIC';
-  const limits = PLAN_LIMITS[currentPlan];
-  const isLimitReached = tasks.length >= (limits?.tasks ?? Infinity);
+  const currentPlan = resolvePlanType(subscription?.planType);
+  const limits = getPlanLimits(currentPlan);
+  const isLimitReached = tasks.length >= limits.tasks;
 
   // Firestore Real-time Sync
   const [messages, setMessages] = useState<Message[]>([]);
@@ -1973,8 +1973,8 @@ export default function App() {
                   onToggleFocus={() => setIsFocusMode(true)}
                   isInviteDisabled={(() => {
                     if (userData?.isPlatformAdmin) return false;
-                    const userPlanType = (subscription?.planType as PlanType) || 'BASIC';
-                    const planLimit = PLAN_LIMITS[userPlanType]?.maxUsers || 0;
+                    const userPlanType = resolvePlanType(subscription?.planType);
+                    const planLimit = getPlanLimits(userPlanType).maxUsers;
                     const invitedCount = users.filter(u => u.id !== user.uid).length;
                     const isFreeMember = effectiveUser?.role === 'MEMBER' && !subscription?.planType?.startsWith('PERSONAL_');
                     return isFreeMember || (invitedCount >= planLimit && planLimit !== Infinity);
@@ -1983,8 +1983,8 @@ export default function App() {
                     if (!user) return;
                     
                     try {
-                      const userPlanType = (subscription?.planType as PlanType) || 'BASIC';
-                      const planLimit = PLAN_LIMITS[userPlanType]?.maxUsers || 0;
+                      const userPlanType = resolvePlanType(subscription?.planType);
+                      const planLimit = getPlanLimits(userPlanType).maxUsers;
                       
                       // Count current members (excluding self for limits if applicable, but usually limits are total members)
                       // User said: "Pode convidar até 2 pessoas (ex: esposa e filho)" -> total 3?
@@ -2022,7 +2022,7 @@ export default function App() {
                           id: newInstId,
                           name: `Instituição de ${user.displayName || 'Membro'}`,
                           inviteCode: inviteCode,
-                          planType: 'BASIC',
+                          planType: 'INSTITUTION_BASIC',
                           createdAt: serverTimestamp(),
                           createdBy: user.uid
                         });
@@ -2044,7 +2044,7 @@ export default function App() {
                         // 4. Update Subscription
                         batch.set(doc(db, 'subscriptions', user.uid), {
                           userId: user.uid,
-                          planType: 'BASIC',
+                          planType: 'INSTITUTION_BASIC',
                           status: 'ACTIVE'
                         }, { merge: true });
                         
@@ -2298,7 +2298,7 @@ export default function App() {
                 <ModuleManagement modules={modules} onToggleModule={toggleModule} />
               ) : activeView === 'plans' ? (
                 <PlanSelector 
-                  currentPlan={isPersonal ? (effectiveUser?.planType || 'BASIC') : institution?.planType}
+                  currentPlan={isPersonal ? resolvePlanType(effectiveUser?.planType) : institution?.planType}
                   hasAdminDiscount={institution?.hasAdminDiscount}
                   forceType={isPersonal ? 'PERSONAL' : (isInstitutionOwner ? 'INSTITUTION' : 'PERSONAL')}
                   onUpgrade={handleUpgrade} 

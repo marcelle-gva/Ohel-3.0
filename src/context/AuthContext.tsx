@@ -289,7 +289,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                       email: currentUser.email,
                       role: isBootstrapAdmin ? 'ADMIN' : (newUserType === 'institution_owner' ? 'ADMIN' : 'MEMBER'),
                       type: newUserType,
-                      planType: pendingPlan || 'BASIC',
+                      planType: pendingPlan || 'PERSONAL_BASIC',
                       isPlatformAdmin: isBootstrapAdmin || Boolean(tokenResult.claims.admin),
                       activeModules: ['matrix', 'focus', 'personal', 'financial', 'family', 'professional', 'spiritual'],
                       createdAt: serverTimestamp()

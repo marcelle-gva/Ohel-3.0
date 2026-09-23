@@ -77,6 +77,30 @@ export const PLAN_LIMITS: Record<string, PlanConfig> = {
   INSTITUTION_PLUS: { maxUsers: Infinity, price: 'R$ 449,90', tasks: Infinity, modules: 4 },
 };
 
+// Old Firestore docs and several call sites still store/default to the
+// pre-2026-09-17 keys (BASIC, INTERMEDIATE, …). PLAN_LIMITS has no entries
+// for those, so looking them up returned undefined and crashed on
+// limits.tasks / limits.modules.
+const LEGACY_PLAN_TO_CURRENT: Record<string, string> = {
+  BASIC: 'PERSONAL_BASIC',
+  INTERMEDIATE: 'PERSONAL_PLUS',
+  ADVANCED: 'PERSONAL_PLUS',
+  PERSONAL_INTERMEDIATE: 'PERSONAL_PLUS',
+  PERSONAL_ADVANCED: 'PERSONAL_PLUS',
+  INSTITUTION_INTERMEDIATE: 'INSTITUTION_PLUS',
+  INSTITUTION_ADVANCED: 'INSTITUTION_PLUS',
+};
+
+export function resolvePlanType(planType?: string | null): string {
+  if (planType && PLAN_LIMITS[planType]) return planType;
+  if (planType && LEGACY_PLAN_TO_CURRENT[planType]) return LEGACY_PLAN_TO_CURRENT[planType];
+  return 'PERSONAL_BASIC';
+}
+
+export function getPlanLimits(planType?: string | null): PlanConfig {
+  return PLAN_LIMITS[resolvePlanType(planType)];
+}
+
 // Which plans unlock which paid-only features. Basic (CPF or CNPJ) never
 // gets these; Plus (CPF or CNPJ) always does.
 export const PLAN_FEATURES: Record<PlanFeature, PlanType[]> = {

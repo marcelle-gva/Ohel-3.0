@@ -967,9 +967,9 @@ async function startServer() {
         const doc = await db.collection('subscriptions').doc(req.params.userId).get();
         if (doc.exists) return res.json(doc.data());
       }
-      return res.json({ planType: 'BASIC', status: 'ACTIVE' });
+      return res.json({ planType: 'PERSONAL_BASIC', status: 'ACTIVE' });
     } catch (error: any) {
-      res.json({ planType: 'BASIC', status: 'ACTIVE' });
+      res.json({ planType: 'PERSONAL_BASIC', status: 'ACTIVE' });
     }
   });
 
