@@ -667,6 +667,7 @@ async function startServer() {
     'https://app.ohel.app',
     'https://ohel-api.onrender.com', // Self
     'https://api.ohel.app',
+    'https://ipo-azure.vercel.app', // Vercel production
     process.env.FRONTEND_URL,
     process.env.CLIENT_URL
   ].filter(Boolean) as string[];
