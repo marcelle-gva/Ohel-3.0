@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Users, DollarSign, Briefcase, Heart, ChevronRight, Activity, Lock, FileText } from 'lucide-react';
+import { Users, Briefcase, Heart, ChevronRight, Activity, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PILAR_CONFIG, PILAR_TAB_CONFIG, PILAR_VIEW_MAP, PILARES } from '@/config/permissions';
 
 interface PillarCardProps {
   title: string;
@@ -19,18 +20,21 @@ const PillarCard: React.FC<PillarCardProps> = ({ title, description, icon, color
     onClick={onClick}
     disabled={disabled}
     className={cn(
-      "relative overflow-hidden group p-6 rounded-2xl border border-border/50 bg-card text-left transition-all glow-blue flex flex-col h-64",
-      disabled ? "opacity-60 grayscale cursor-not-allowed" : "hover:border-primary/50"
+      'relative overflow-hidden group p-6 rounded-2xl border border-border/50 bg-card text-left transition-all glow-blue flex flex-col h-64',
+      disabled ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:border-primary/50'
     )}
   >
-    <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-colors", color)}>
+    <div
+      className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-colors"
+      style={{ backgroundColor: `${color}22`, color }}
+    >
       {disabled ? <Lock className="w-6 h-6" /> : icon}
     </div>
     <div className="flex-1">
       <h3 className="text-2xl font-black italic tracking-tighter uppercase mb-2 group-hover:text-primary transition-colors leading-none">{title}</h3>
       <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
     </div>
-    
+
     {!disabled ? (
       <div className="flex items-center gap-2 text-primary font-bold text-sm mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
         Acessar Módulo <ChevronRight className="w-4 h-4" />
@@ -40,50 +44,32 @@ const PillarCard: React.FC<PillarCardProps> = ({ title, description, icon, color
         Apenas para Instituições <Lock className="w-3 h-3" />
       </div>
     )}
-    
-    {/* Decorative background element */}
+
     <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors" />
   </motion.button>
 );
 
 interface OrdemNoCaosProps {
-  onNavigate: (view: any) => void;
+  onNavigate: (view: string) => void;
   profileType: 'personal' | 'institutional';
 }
 
+const pillarIcons: Record<string, React.ReactNode> = {
+  FAMILIAR: <Users className="w-8 h-8" />,
+  PESSOAL: <Activity className="w-8 h-8" />,
+  PROFISSIONAL: <Briefcase className="w-8 h-8" />,
+  ESPIRITUAL: <Heart className="w-8 h-8" />,
+};
+
 export const OrdemNoCaos: React.FC<OrdemNoCaosProps> = ({ onNavigate, profileType }) => {
-  const pillars = [
-    {
-      id: 'familiar',
-      title: 'Familiar',
-      description: 'Mural da família, Álbum de memórias e organização do dia a dia no lar.',
-      icon: <Users className="w-8 h-8" />,
-      color: 'bg-purple-500/10 text-purple-500',
-    },
-    {
-      id: profileType === 'personal' ? 'fitness' : 'fitness',
-      title: profileType === 'personal' ? 'PESSOAL' : 'Pessoal',
-      description: 'Hábitos diários, contador de passos, água, cardápio semanal e área fitness.',
-      icon: <Activity className="w-8 h-8" />,
-      color: 'bg-green-500/10 text-green-500',
-    },
-    {
-      id: profileType === 'personal' ? 'financeiro' : 'profissional',
-      title: profileType === 'personal' ? 'FINANCEIRO' : 'Profissional',
-      description: profileType === 'personal' 
-        ? 'Controle as finanças da casa, entradas, saídas e saúde financeira do seu lar.'
-        : 'Gestão de equipe, finanças do trabalho, tickets, produtividade e metas.',
-      icon: profileType === 'personal' ? <DollarSign className="w-8 h-8" /> : <Briefcase className="w-8 h-8" />,
-      color: profileType === 'personal' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500',
-    },
-    {
-      id: 'spiritual',
-      title: 'ESPIRITUAL',
-      description: 'Metas espirituais, devocionais, bíblia online e conexão com o propósito.',
-      icon: <Heart className="w-8 h-8" />,
-      color: 'bg-red-500/10 text-red-500',
-    },
-  ];
+  const pillars = PILARES.map((pillar) => ({
+    id: PILAR_VIEW_MAP[pillar],
+    title: pillar,
+    description: PILAR_CONFIG[pillar].subtitulo,
+    icon: pillarIcons[pillar],
+    color: PILAR_CONFIG[pillar].cor,
+    tabs: PILAR_TAB_CONFIG[pillar].tabs,
+  }));
 
   return (
     <div className="space-y-12 py-6">
@@ -100,10 +86,21 @@ export const OrdemNoCaos: React.FC<OrdemNoCaosProps> = ({ onNavigate, profileTyp
             description={pillar.description}
             icon={pillar.icon}
             color={pillar.color}
-            disabled={ false }
+            disabled={false}
             onClick={() => onNavigate(pillar.id)}
           />
         ))}
+      </div>
+
+      <div className="rounded-2xl border border-border/60 bg-card/80 p-4 text-sm text-muted-foreground">
+        <p className="font-semibold text-foreground mb-2">Abas configuradas por pilar:</p>
+        <div className="flex flex-wrap gap-2">
+          {pillars.flatMap((pillar) => pillar.tabs.map((tab) => (
+            <span key={`${pillar.id}-${tab.key}`} className="rounded-full border px-2 py-1 text-xs" style={{ borderColor: `${pillar.color}55`, color: pillar.color }}>
+              {pillar.title}: {tab.label}
+            </span>
+          )))}
+        </div>
       </div>
     </div>
   );

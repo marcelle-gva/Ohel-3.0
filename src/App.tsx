@@ -121,6 +121,15 @@ import { OhelAgentView } from '@/components/OhelAgentView';
 import { VideoCall } from '@/components/VideoCall';
 import { CalendarView } from '@/components/CalendarView';
 import { ProfilePage } from '@/components/ProfilePage';
+import {
+  contextFromGroup,
+  hasMinPlan,
+  canSeeModelosDeTarefa,
+  canSeeVideoCall,
+  MENU_RULES,
+  canAccessView,
+  type UserContext,
+} from '@/config/permissions';
 import { BookOpen, Home, Activity, Briefcase, Calendar as CalendarIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, ShieldCheck, Video as VideoIcon, Sparkles, Globe } from 'lucide-react';
 import { AdminProfileSwitcher, AdminPerspectiveMode } from '@/components/admin/AdminProfileSwitcher';
 import { AdminInspectionBanner } from '@/components/admin/AdminInspectionBanner';
@@ -141,7 +150,7 @@ import {
 const INITIAL_TASKS: Task[] = [];
 const APP_VERSION = '2026.04.20.1510'; // Controle de Versão OHEL
 
-type View = 'dashboard' | 'matrix' | 'stats' | 'modules' | 'institution' | 'household' | 'ranking' | 'pillar-connections' | 'plans' | 'finance' | 'spiritual' | 'notifications' | 'ordem-no-caos' | 'familiar' | 'profissional' | 'biblioteca' | 'fitness' | 'calendar' | 'missions' | 'logistics' | 'messages' | 'profile' | 'admin-panel' | 'video-call' | 'templates' | 'documentos' | 'agent' | 'global-platform';
+type View = 'dashboard' | 'matrix' | 'stats' | 'modules' | 'institution' | 'household' | 'ranking' | 'pillar-connections' | 'plans' | 'finance' | 'spiritual' | 'espiritual' | 'notifications' | 'ordem-no-caos' | 'familiar' | 'pessoal' | 'profissional' | 'biblioteca' | 'fitness' | 'calendar' | 'missions' | 'logistics' | 'messages' | 'profile' | 'admin-panel' | 'video-call' | 'templates' | 'documentos' | 'agent' | 'global-platform';
 
 export default function App() {
   const { 
@@ -1262,11 +1271,34 @@ export default function App() {
     );
   }
 
-  // Phase 7: Block institutional routes for personal users
-  if (profileType === 'personal' && (activeView === 'profissional' || activeView === 'institution')) {
-    setActiveView('dashboard');
-    toast.error('Acesso restrito a membros institucionais');
-  }
+  const normalizedPlan = (effectiveUserData?.planType || subscription?.planType || 'PERSONAL_BASIC') as string;
+  const userContext: UserContext = contextFromGroup(
+    {
+      type: activeContextType === 'INSTITUTION' || viewMode === 'INSTITUTION_OWNER' || viewMode === 'INSTITUTION_MEMBER' ? 'CNPJ' : 'CPF',
+      planType: normalizedPlan,
+    },
+    {
+      isPlatformAdmin: isPlatformAdmin,
+      activeGroupId: activeContextId,
+      ownedGroupIds: authUserData?.ownedGroupIds,
+      memberOfGroupIds: authUserData?.memberOfGroupIds,
+    }
+  );
+
+  useEffect(() => {
+    const routeAllowed = canAccessView(activeView, userContext, {
+      isMaster,
+      isPersonal,
+      isInstitutionOwner,
+      isMember,
+      hasActiveContext: activeContextType !== 'PERSONAL' && Boolean(activeContextId),
+    });
+
+    if (!routeAllowed && activeView !== 'dashboard') {
+      setActiveView('dashboard');
+      toast.error('Acesso restrito para este plano e pilar.');
+    }
+  }, [activeView, userContext, isMaster, isPersonal, isInstitutionOwner, isMember, activeContextType, activeContextId]);
 
   const handleTaskComplete = async (taskId: string, timeSpent: number) => {
     try {
@@ -1334,66 +1366,21 @@ export default function App() {
     localStorage.setItem('isSidebarCollapsed', String(newState));
   };
 
-  const plan = effectiveUserData?.planType as string || 'BASIC';
-
-  const sidebarItems: { id: View; label: string; icon: any; isNew?: boolean }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'agent', label: 'Agente OHEL', icon: Sparkles, isNew: true },
-    { id: 'calendar', label: 'Minhas Tarefas', icon: CalendarIcon },
-    { id: 'messages', label: 'Mensagens', icon: MessageSquare },
-    { id: 'ordem-no-caos', label: 'Ordem no Caos', icon: Layers },
-    { id: 'video-call', label: 'Chamada de Vídeo', icon: VideoIcon, isNew: true },
-    { id: 'templates', label: 'Modelos de Tarefa', icon: ClipboardList, isNew: true },
-    { id: 'documentos', label: 'Gestão Pessoal', icon: FileText },
+  const sidebarDefinitions = [
+    { id: 'dashboard' as View, label: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' as const },
+    { id: 'agent' as View, label: 'Agente OHEL', icon: Sparkles, isNew: true, key: 'agente-ohel' as const },
+    { id: 'calendar' as View, label: 'Minhas Tarefas', icon: CalendarIcon, key: 'minhas-tarefas' as const },
+    { id: 'messages' as View, label: 'Mensagens', icon: MessageSquare, key: 'mensagens' as const },
+    { id: 'ordem-no-caos' as View, label: 'Ordem no Caos', icon: Layers, key: 'ordem-no-caos' as const },
+    { id: 'documentos' as View, label: 'Gestão Pessoal', icon: FileText, key: 'gestao-pessoal' as const, showWhen: (ctx: UserContext) => MENU_RULES['gestao-pessoal'](ctx) },
+    { id: 'institution' as View, label: 'Gestão Institucional', icon: Building2, key: 'gestao-institucional' as const, showWhen: (ctx: UserContext) => MENU_RULES['gestao-institucional'](ctx) },
+    { id: 'global-platform' as View, label: 'Visão Global', icon: Globe, isNew: true, key: 'visao-global' as const, showWhen: (ctx: UserContext) => MENU_RULES['visao-global'](ctx) },
   ];
 
-  if (activeContextType !== 'PERSONAL' && activeContextId) {
-    sidebarItems.push({ id: 'ranking', label: 'Ranking', icon: Trophy });
-  }
-
-  // Logic based on profile
-  if (isPersonal) {
-    // PERSONAL
-    if (plan.includes('INTERMEDIATE')) {
-      sidebarItems.push({ id: 'biblioteca', label: 'Biblioteca', icon: BookOpen });
-    }
-    if (plan.includes('ADVANCED')) {
-      if (!sidebarItems.find(i => i.id === 'biblioteca')) sidebarItems.push({ id: 'biblioteca', label: 'Biblioteca', icon: BookOpen });
-      if (!sidebarItems.find(i => i.id === 'missions')) sidebarItems.push({ id: 'missions', label: 'Missões', icon: Trophy });
-    }
-    sidebarItems.push({ id: 'plans', label: 'Planos', icon: CreditCard });
-  } else if (isInstitutionOwner) {
-    // INSTITUTION OWNER
-    sidebarItems.push({ id: 'missions', label: 'Missões', icon: Trophy });
-    sidebarItems.push({ id: 'biblioteca', label: 'Biblioteca', icon: BookOpen });
-    sidebarItems.push({ id: 'logistics', label: 'Logística', icon: MapPin });
-    sidebarItems.push({ id: 'notifications', label: 'Notificações', icon: Bell });
-    sidebarItems.push({ id: 'institution', label: 'Gestão Institucional', icon: Building2 });
-  } else if (isMember) {
-    // MEMBER
-    const hasPersonalUpgrade = subscription?.planType && subscription.planType !== 'BASIC';
-    if (hasPersonalUpgrade) {
-      // familiar removed
-    }
-    sidebarItems.push({ id: 'plans', label: 'Planos', icon: CreditCard });
-  }
-
-  // Master Overrides - Only apply extra items when in "Automatic" (Real) view
-  // or keep specific essential admin tools
-  if (isMaster) {
-    if (!sidebarItems.find(i => i.id === 'global-platform')) {
-      sidebarItems.unshift({ id: 'global-platform', label: 'Visão Global', icon: Globe, isNew: true });
-    }
-    if (viewMode === null && !impersonatedUser) {
-      if (!sidebarItems.find(i => i.id === 'logistics')) sidebarItems.push({ id: 'logistics', label: 'Logística', icon: MapPin });
-      if (!sidebarItems.find(i => i.id === 'notifications')) sidebarItems.push({ id: 'notifications', label: 'Notificações', icon: Bell });
-      if (!sidebarItems.find(i => i.id === 'missions')) sidebarItems.push({ id: 'missions', label: 'Missões', icon: Trophy });
-      if (!sidebarItems.find(i => i.id === 'biblioteca')) sidebarItems.push({ id: 'biblioteca', label: 'Biblioteca', icon: BookOpen });
-      if (!sidebarItems.find(i => i.id === 'plans')) sidebarItems.push({ id: 'plans', label: 'Planos', icon: CreditCard });
-      
-      sidebarItems.push({ id: 'admin-panel', label: 'Painel Master', icon: ShieldCheck });
-    }
-  }
+  const sidebarItems: { id: View; label: string; icon: any; isNew?: boolean }[] = sidebarDefinitions
+    .filter((item) => !item.showWhen || item.showWhen(userContext))
+    .filter((item) => (item.key ? MENU_RULES[item.key](userContext) : true))
+    .map(({ id, label, icon, isNew }) => ({ id, label, icon, isNew }));
 
   return (
     <TooltipProvider>
@@ -2323,6 +2310,32 @@ export default function App() {
                 <PersonalFinanceModule userId={user.uid} />
               ) : activeView === 'profissional' ? (
                 <ProfessionalModule userId={user.uid} institutionId={effectiveUser?.institutionId} defaultTab={professionalDefaultTab} />
+              ) : activeView === 'pessoal' ? (
+                <PersonalModule 
+                  userId={user.uid} 
+                  tasks={tasks.filter(t => t.moduleId === 'familiar')} 
+                  onTaskComplete={handleTaskComplete} 
+                  onDeleteTask={deleteTask}
+                  addTask={addTask}
+                  onOpenAddTask={(initialData) => {
+                    if (initialData?.quadrant) {
+                      setActiveQuadrant(initialData.quadrant);
+                    }
+                    setTaskDialogTitle(initialData?.title?.includes('Evento') ? 'Criar Novo Evento' : 'Criar Nova Tarefa');
+                    setSelectedTask(initialData ? {
+                      id: '',
+                      title: initialData.title || '',
+                      description: initialData.description || '',
+                      quadrant: initialData.quadrant || 'important-not-urgent',
+                      status: 'PENDING',
+                      completed: false,
+                      createdAt: Date.now(),
+                      type: 'PERSONAL',
+                      moduleId: initialData.moduleId || 'familiar',
+                    } : null);
+                    setIsDialogOpen(true);
+                  }}
+                />
               ) : activeView === 'familiar' ? (
                 <PersonalModule 
                   userId={user.uid} 
@@ -2349,6 +2362,8 @@ export default function App() {
                     setIsDialogOpen(true);
                   }}
                 />
+              ) : activeView === 'espiritual' ? (
+                <SpiritualModule userId={user.uid} />
               ) : activeView === 'documentos' ? (
                 <DocumentsModule userId={user.uid} />
               ) : activeView === 'fitness' ? (
