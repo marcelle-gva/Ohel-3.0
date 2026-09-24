@@ -348,6 +348,7 @@ export default function App() {
             batch.set(doc(db, 'institutions', newInstId, 'members', user.uid), {
               userId: user.uid,
               role: 'ADMIN',
+              status: 'ACTIVE',
               joinedAt: serverTimestamp()
             });
             
@@ -2031,6 +2032,7 @@ export default function App() {
                         batch.set(doc(db, 'institutions', newInstId, 'members', user.uid), {
                           userId: user.uid,
                           role: 'ADMIN',
+                          status: 'ACTIVE',
                           joinedAt: serverTimestamp()
                         });
                         

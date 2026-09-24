@@ -50,6 +50,7 @@ import { toast } from 'sonner';
 import { Task, Module, User as UserType } from '@/types';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useAuth } from '@/context/AuthContext';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -141,20 +142,44 @@ export const MissionsView: React.FC<MissionsViewProps> = ({ user, tasks, modules
 
   const permissions = usePermissions(user);
   const isManager = permissions.canCreateMissions;
+  const { isPlatformAdmin } = useAuth();
 
   useEffect(() => {
-    // Sync Missions
-    const qMissions = query(
-      collection(db, 'missions'),
-      where('status', '==', 'ACTIVE'),
-      orderBy('createdAt', 'desc')
-    );
+    const currentUserId = user.id || (user as any).uid;
+    const institutionId = user.institutionId;
+
+    if (!institutionId && !isPlatformAdmin) {
+      setMissions([]);
+      setCompletions([]);
+      setLoading(false);
+      return;
+    }
+
+    // Platform admins can read all active missions; institutional members are
+    // constrained to their own institution to respect the Firestore rule.
+    const qMissions = isPlatformAdmin
+      ? query(
+          collection(db, 'missions'),
+          where('status', '==', 'ACTIVE'),
+          orderBy('createdAt', 'desc')
+        )
+      : query(
+          collection(db, 'missions'),
+          where('institutionId', '==', institutionId),
+          where('status', '==', 'ACTIVE'),
+          orderBy('createdAt', 'desc')
+        );
     const unsubscribeMissions = onSnapshot(qMissions, (snapshot) => {
       setMissions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Mission)));
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'missions'));
 
-    // Sync Completions
-    const qCompletions = query(collection(db, 'mission_completions'), orderBy('completedAt', 'desc'));
+    // Sync Completions scoped to the current user so the query matches the
+    // Firestore rule: signed-in users may only read their own completions.
+    const qCompletions = query(
+      collection(db, 'mission_completions'),
+      where('userId', '==', currentUserId),
+      orderBy('completedAt', 'desc')
+    );
     const unsubscribeCompletions = onSnapshot(qCompletions, (snap) => {
       setCompletions(snap.docs.map(d => ({ id: d.id, ...d.data() } as MissionCompletion)));
       setLoading(false);
@@ -164,7 +189,7 @@ export const MissionsView: React.FC<MissionsViewProps> = ({ user, tasks, modules
       unsubscribeMissions();
       unsubscribeCompletions();
     };
-  }, []);
+  }, [user.id, user.institutionId]);
 
   const handleCompleteMission = async (mission: Mission) => {
     try {

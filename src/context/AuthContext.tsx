@@ -123,7 +123,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     let isMounted = true;
-    const q = query(collectionGroup(db, 'members'), where('userId', '==', user.uid));
+    // Keep the membership snapshot constrained to the authenticated user and
+    // only active memberships. Pending invites are intentionally excluded from
+    // the profile switcher and are rejected by the Firestore rules for reads.
+    const q = query(
+      collectionGroup(db, 'members'),
+      where('userId', '==', user.uid),
+      where('status', '==', 'ACTIVE')
+    );
     const unsub = onSnapshot(q, async (snapshot) => {
       const results: MembershipSummary[] = [];
       for (const memberDoc of snapshot.docs) {

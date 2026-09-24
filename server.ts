@@ -91,6 +91,10 @@ function extractEventAndDate(text: string): {
     }
   }
 
+  const isValidDate = (year: number, month: number, day: number, date: Date) => {
+    return date.getFullYear() === year && date.getMonth() === month && date.getDate() === day;
+  };
+
   // 3. Pattern: "dia 15 de setembro [de 2026]" or "15 de setembro"
   if (!extractedDate) {
     const dayMonthRegex = /(?:dia\s+)?(\d{1,2})\s*(?:de\s+)?([a-zçãé]+)(?:\s*(?:de\s+)?(\d{4}))?/i;
@@ -99,10 +103,13 @@ function extractEventAndDate(text: string): {
       const dayNum = parseInt(match[1], 10);
       const monthStr = match[2].toLowerCase();
       const yearNum = match[3] ? parseInt(match[3], 10) : currentYear;
-      
+
       if (MONTHS_PT_MAP[monthStr] !== undefined && dayNum >= 1 && dayNum <= 31) {
         const monthIndex = MONTHS_PT_MAP[monthStr];
-        extractedDate = new Date(yearNum, monthIndex, dayNum, 9, 0, 0);
+        const candidate = new Date(yearNum, monthIndex, dayNum, 9, 0, 0);
+        if (isValidDate(yearNum, monthIndex, dayNum, candidate)) {
+          extractedDate = candidate;
+        }
       }
     }
   }
@@ -118,7 +125,10 @@ function extractEventAndDate(text: string): {
       if (yearNum < 100) yearNum += 2000;
 
       if (monthNum >= 0 && monthNum <= 11 && dayNum >= 1 && dayNum <= 31) {
-        extractedDate = new Date(yearNum, monthNum, dayNum, 9, 0, 0);
+        const candidate = new Date(yearNum, monthNum, dayNum, 9, 0, 0);
+        if (isValidDate(yearNum, monthNum, dayNum, candidate)) {
+          extractedDate = candidate;
+        }
       }
     }
   }
@@ -139,7 +149,10 @@ function extractEventAndDate(text: string): {
             yearNum += 1;
           }
         }
-        extractedDate = new Date(yearNum, monthIndex, dayNum, 9, 0, 0);
+        const candidate = new Date(yearNum, monthIndex, dayNum, 9, 0, 0);
+        if (isValidDate(yearNum, monthIndex, dayNum, candidate)) {
+          extractedDate = candidate;
+        }
       }
     }
   }
@@ -619,12 +632,17 @@ async function requireAuth(req: AuthedRequest, res: express.Response, next: expr
   const idToken = authHeader.split('Bearer ')[1];
   try {
     const decoded = await admin.auth().verifyIdToken(idToken);
-    req.auth = decoded;
-    next();
-  } catch (err: any) {
-    console.warn('Auth token verification failed:', err?.message);
-    return res.status(401).json({ error: 'Token inválido ou expirado.' });
+  // Email verification is a security gate for privileged operations; deny
+  // unverified identities before they can reach protected routes.
+  if (decoded.email_verified === false) {
+    return res.status(403).json({ error: 'Email ainda não verificado.' });
   }
+  req.auth = decoded;
+  next();
+} catch (err: any) {
+  console.warn('Auth token verification failed:', err?.message);
+  return res.status(401).json({ error: 'Token inválido ou expirado.' });
+}
 }
 
 /**
@@ -663,6 +681,10 @@ async function requireAdmin(req: AuthedRequest, res: express.Response, next: exp
 }
 
 async function startServer() {
+  if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_EMAIL) {
+    throw new Error('ADMIN_EMAIL is required in production mode.');
+  }
+
   const app = express();
   const PORT = 3000; // Mandatory port for AIS environment and proxy consistency
 
@@ -679,14 +701,26 @@ async function startServer() {
   app.set('trust proxy', 1);
 
   // Strict CORS configuration
-  const allowedOrigins = [
+  const configuredFrontendUrl = process.env.FRONTEND_URL || 'https://app.ohel.app';
+  const allowedOrigins = Array.from(new Set([
+    configuredFrontendUrl,
+    ...((process.env.ALLOWED_ORIGINS || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)),
     'https://app.ohel.app',
     'https://ohel-api.onrender.com', // Self
     'https://api.ohel.app',
-    'https://ipo-azure.vercel.app', // Vercel production
-    process.env.FRONTEND_URL,
-    process.env.CLIENT_URL
-  ].filter(Boolean) as string[];
+    'https://ipo-azure.vercel.app' // Vercel production
+  ]));
+
+  const resolveFrontendUrl = (origin?: string) => {
+    if (origin && allowedOrigins.includes(origin)) {
+      return origin;
+    }
+
+    return configuredFrontendUrl;
+  };
 
   const allowedOriginPatterns = [
     /^https:\/\/ais-(?:dev|pre)-[a-zA-Z0-9]+-644833630029\.[a-z0-9-]+\.run\.app$/,
@@ -756,7 +790,11 @@ async function startServer() {
 
   // Webhook endpoint (Raw body needed)
   app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-    if (!stripe) return res.status(500).json({ error: 'Stripe not configured' });
+    // Stripe webhooks must fail as a server-side dependency issue, not as a
+    // malformed payload, when Firestore or the Stripe client is unavailable.
+    if (!stripe || !db) {
+      return res.status(503).json({ error: 'Stripe or Firestore unavailable' });
+    }
 
     const sig = req.headers['stripe-signature'];
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -767,7 +805,7 @@ async function startServer() {
 
     try {
       const event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-      
+
       if (event.type === 'checkout.session.completed') {
         const session = event.data.object as any;
         const userId = session.client_reference_id;
@@ -777,7 +815,7 @@ async function startServer() {
         if (userId) {
           const eventRef = db.collection('processed_events').doc(eventId);
           const eventDoc = await eventRef.get();
-          
+
           if (!eventDoc.exists) {
             const batch = db.batch();
             batch.update(db.collection('users').doc(userId), {
@@ -786,7 +824,7 @@ async function startServer() {
               stripeCustomerId: stripeCustomerId || null,
               updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
-            
+
             batch.set(db.collection('subscriptions').doc(userId), {
               userId,
               planType: 'PRO',
@@ -805,10 +843,20 @@ async function startServer() {
           }
         }
       }
-      res.json({ received: true });
+      return res.json({ received: true });
     } catch (err: any) {
-      console.error(`Webhook Error: ${err.message}`);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
+      const message = err?.message || 'Unknown webhook error';
+      const isValidationFailure = err?.type === 'StripeSignatureVerificationError' || err instanceof SyntaxError;
+
+      console.error(`Webhook Error: ${message}`);
+
+      if (isValidationFailure) {
+        return res.status(400).send(`Webhook Error: ${message}`);
+      }
+
+      // Any Firestore or Stripe infrastructure issue is transient and must not
+      // be reported back to Stripe as a bad payload.
+      return res.status(503).json({ error: 'Webhook processing unavailable' });
     }
   });
 
@@ -847,6 +895,9 @@ async function startServer() {
     if (!streamClient) {
       return res.status(500).json({ error: 'Stream not configured' });
     }
+    if (!db) {
+      return res.status(503).json({ error: 'Firestore indisponível' });
+    }
 
     const { userId, contextType, contextId } = req.body;
     if (!userId) {
@@ -866,7 +917,7 @@ async function startServer() {
         return res.status(402).json({ error: 'Videochamada é um recurso do plano Plus.' });
       }
       // Caller must actually belong to the context they're claiming Plus through.
-      const memberDoc = await db!.collection(contextType === 'HOUSEHOLD' ? 'households' : 'institutions')
+      const memberDoc = await db.collection(contextType === 'HOUSEHOLD' ? 'households' : 'institutions')
         .doc(contextId).collection('members').doc(userId).get();
       if (!memberDoc.exists) {
         return res.status(403).json({ error: 'Você não pertence a esse contexto.' });
@@ -1008,6 +1059,7 @@ async function startServer() {
     const email = req.auth!.email;
 
     try {
+      const frontendBaseUrl = resolveFrontendUrl(req.headers.origin as string | undefined);
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         customer_email: email,
@@ -1017,8 +1069,8 @@ async function startServer() {
           quantity: 1,
         }],
         mode: 'subscription',
-        success_url: `${req.headers.origin}/?success=true`,
-        cancel_url: `${req.headers.origin}/?canceled=true`,
+        success_url: `${frontendBaseUrl}/?success=true`,
+        cancel_url: `${frontendBaseUrl}/?canceled=true`,
         allow_promotion_codes: true,
       });
 
@@ -1044,9 +1096,10 @@ async function startServer() {
         return res.status(404).json({ error: 'Nenhuma assinatura Stripe encontrada para este usuário.' });
       }
 
+      const frontendBaseUrl = resolveFrontendUrl(req.headers.origin as string | undefined);
       const session = await stripe.billingPortal.sessions.create({
         customer: customerId,
-        return_url: req.headers.origin,
+        return_url: frontendBaseUrl,
       });
       res.json({ url: session.url });
     } catch (error: any) {
@@ -1065,6 +1118,10 @@ async function startServer() {
     const { taskId, points = 10 } = req.body;
     if (!taskId) return res.status(400).json({ error: 'taskId is required' });
 
+    if (!Number.isInteger(points) || points < 1 || points > 1000) {
+      return res.status(400).json({ error: 'points must be an integer between 1 and 1000.' });
+    }
+
     try {
       const taskSnap = await db.collection('tasks').doc(taskId).get();
       if (!taskSnap.exists) return res.status(404).json({ error: 'Task not found' });
@@ -1074,38 +1131,76 @@ async function startServer() {
       const contextId = task.contextId || null;
       if (contextType === 'PERSONAL' || !contextId) {
         // No ranking outside a Household/Institution — nothing to award into.
-        return res.json({ awarded: false, reason: 'PERSONAL context has no ranking' });
+        return res.status(403).json({ error: 'Task não pertence a um contexto com ranking.' });
       }
 
-      // Ranking must be turned on by the context's owner (2026-09-17: "isso
-      // pode existir... caso o dono ative" — separate per context, never merged).
-      const contextDoc = await db.collection(contextType === 'HOUSEHOLD' ? 'households' : 'institutions').doc(contextId).get();
+      if (task.status !== 'COMPLETED' && task.completed !== true) {
+        return res.status(403).json({ error: 'Só é possível pontuar tarefas concluídas.' });
+      }
+
+      const contextCollection = contextType === 'HOUSEHOLD' ? 'households' : 'institutions';
+      const contextDoc = await db.collection(contextCollection).doc(contextId).get();
       if (!contextDoc.exists || !contextDoc.data()?.rankingEnabled) {
-        return res.json({ awarded: false, reason: 'Ranking not enabled for this context' });
+        return res.status(403).json({ error: 'Ranking não habilitado para este contexto.' });
       }
 
-      // Whoever actually did the task (assignee if delegated, else the owner).
-      const userId = (task.assignedTo && task.assignedTo.length > 0) ? task.assignedTo[0] : task.userId;
-      if (req.auth!.uid !== userId && req.auth!.uid !== task.userId) {
+      const awardedUserId = (task.assignedTo && task.assignedTo.length > 0) ? task.assignedTo[0] : task.userId;
+      const callerUserId = req.auth!.uid;
+      const allowedAwardUsers = new Set([task.userId, ...(task.assignedTo || [])]);
+      if (!allowedAwardUsers.has(callerUserId)) {
         return res.status(403).json({ error: 'Você não pode pontuar essa tarefa.' });
+      }
+
+      const memberRef = db.collection(contextCollection).doc(contextId).collection('members').doc(callerUserId);
+      const memberSnap = await memberRef.get();
+      if (!memberSnap.exists) {
+        return res.status(403).json({ error: 'Você não pertence a esse contexto.' });
       }
 
       const now = new Date();
       const weekId = `${now.getFullYear()}-W${String(Math.ceil(((Number(now) - Number(new Date(now.getFullYear(), 0, 1))) / 86400000 + new Date(now.getFullYear(), 0, 1).getDay() + 1) / 7)).padStart(2, '0')}`;
-      const rankingId = `${contextType}_${contextId}_${userId}_${weekId}`;
+      const rankingId = `${contextType}_${contextId}_${awardedUserId}_${weekId}`;
+      const awardMarkerId = `${awardedUserId}_${taskId}`;
+      const awardRef = db.collection('ranking_awards').doc(awardMarkerId);
 
-      const userDoc = await db.collection('users').doc(userId).get();
-      await db.collection('rankings').doc(rankingId).set({
-        userId,
-        userName: userDoc.exists ? (userDoc.data()?.name || 'Usuário') : 'Usuário',
-        contextType,
-        contextId,
-        weekId,
-        points: admin.firestore.FieldValue.increment(Math.max(1, Math.min(points, 100))),
-      }, { merge: true });
+      const result = await db.runTransaction(async (transaction) => {
+        const awardSnap = await transaction.get(awardRef);
+        if (awardSnap.exists) {
+          throw Object.assign(new Error('already awarded'), { statusCode: 409 });
+        }
 
-      res.json({ awarded: true, weekId });
+        const rankingRef = db.collection('rankings').doc(rankingId);
+        const userDocRef = db.collection('users').doc(awardedUserId);
+        const userDocSnap = await transaction.get(userDocRef);
+        const userName = userDocSnap.exists ? (userDocSnap.data()?.name || 'Usuário') : 'Usuário';
+
+        transaction.set(awardRef, {
+          taskId,
+          userId: awardedUserId,
+          contextType,
+          contextId,
+          weekId,
+          points,
+          awardedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        transaction.set(rankingRef, {
+          userId: awardedUserId,
+          userName,
+          contextType,
+          contextId,
+          weekId,
+          points: admin.firestore.FieldValue.increment(points)
+        }, { merge: true });
+
+        return { awarded: true, weekId };
+      });
+
+      res.json(result);
     } catch (error: any) {
+      if (error?.statusCode === 409) {
+        return res.status(409).json({ error: 'already awarded' });
+      }
       res.status(500).json({ error: error.message });
     }
   });
@@ -1346,12 +1441,16 @@ Sua resposta deve ser estritamente em formato JSON, seguindo exatamente este sch
       const email = req.auth!.email;
       const uid = req.auth!.uid;
 
-      const configuredAdmin = process.env.ADMIN_EMAIL || 'marcelle.gomesvieira.ayres@gmail.com';
+      const configuredAdmin = process.env.ADMIN_EMAIL;
+      if (!configuredAdmin) {
+        throw new Error('ADMIN_EMAIL is required in production.');
+      }
       const isTargetAdmin = email === configuredAdmin || email === 'admin@ohel.app';
 
       // Check Firestore users document if server DB available
       let targetUid = uid;
       let docIsAdmin = false;
+      const failures: string[] = [];
 
       if (db && firebaseAdminAvailable) {
         if (!targetUid && email) {
@@ -1361,7 +1460,7 @@ Sua resposta deve ser estritamente em formato JSON, seguindo exatamente este sch
               targetUid = userQuery.docs[0].id;
             }
           } catch (e) {
-            // Ignored
+            failures.push(`user lookup failed: ${(e as Error).message}`);
           }
         }
 
@@ -1371,42 +1470,56 @@ Sua resposta deve ser estritamente em formato JSON, seguindo exatamente este sch
             const userDocSnap = await userDocRef.get();
             docIsAdmin = userDocSnap.exists && userDocSnap.data()?.isPlatformAdmin === true;
           } catch (e) {
-            // Ignored
+            failures.push(`admin status lookup failed: ${(e as Error).message}`);
           }
         }
       }
 
       if (isTargetAdmin || docIsAdmin) {
-        // Try setting custom claims if admin.auth() is available
-        if (targetUid && firebaseAdminAvailable) {
+        if (!targetUid || !firebaseAdminAvailable) {
+          return res.status(500).json({ error: 'Administrador indisponível para sincronização.', failures });
+        }
+
+        try {
+          await admin.auth().setCustomUserClaims(targetUid, {
+            admin: true,
+            role: 'ADMIN'
+          });
+        } catch (claimsErr: any) {
+          failures.push(`setCustomUserClaims failed: ${claimsErr.message}`);
+        }
+
+        if (db) {
           try {
-            await admin.auth().setCustomUserClaims(targetUid, {
-              admin: true,
-              role: 'ADMIN'
-            });
-          } catch (claimsErr: any) {
-            // Ignored
+            await db.collection('users').doc(targetUid).set({
+              isPlatformAdmin: true,
+              role: 'ADMIN',
+              updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          } catch (dbErr: any) {
+            failures.push(`users write failed: ${dbErr.message}`);
           }
 
-          if (db) {
-            try {
-              await db.collection('users').doc(targetUid).set({
-                isPlatformAdmin: true,
-                role: 'ADMIN',
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
-              }, { merge: true });
-
-              await db.collection('admins').doc(targetUid).set({
-                uid: targetUid,
-                email: email || configuredAdmin,
-                role: 'ADMIN',
-                isPlatformAdmin: true,
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
-              }, { merge: true });
-            } catch (dbErr) {
-              // Ignored
-            }
+          try {
+            await db.collection('admins').doc(targetUid).set({
+              uid: targetUid,
+              email: email || configuredAdmin,
+              role: 'ADMIN',
+              isPlatformAdmin: true,
+              updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          } catch (dbErr: any) {
+            failures.push(`admins write failed: ${dbErr.message}`);
           }
+        }
+
+        if (failures.length > 0) {
+          return res.status(500).json({
+            success: false,
+            admin: false,
+            failures,
+            message: 'Falha na sincronização de administrador.'
+          });
         }
 
         return res.json({
@@ -1433,35 +1546,65 @@ Sua resposta deve ser estritamente em formato JSON, seguindo exatamente este sch
         return res.status(400).json({ error: 'Target user email or uid is required.' });
       }
 
-      const targetUid = uid;
+      let targetUid = uid as string | undefined;
       const newClaims = claims || { admin: true, role: 'ADMIN' };
 
-      if (targetUid && firebaseAdminAvailable) {
+      if (!targetUid && email && firebaseAdminAvailable) {
         try {
-          await admin.auth().setCustomUserClaims(targetUid, newClaims);
-        } catch (claimsErr: any) {
-          // Ignored
+          const user = await admin.auth().getUserByEmail(email);
+          targetUid = user.uid;
+        } catch (lookupErr: any) {
+          return res.status(404).json({ error: `User not found for email: ${email}` });
+        }
+      }
+
+      if (!targetUid) {
+        return res.status(400).json({ error: 'Target user email or uid is required.' });
+      }
+
+      if (!firebaseAdminAvailable) {
+        return res.status(503).json({ error: 'Firebase Admin indisponível.' });
+      }
+
+      const failures: string[] = [];
+      try {
+        await admin.auth().setCustomUserClaims(targetUid, newClaims);
+      } catch (claimsErr: any) {
+        failures.push(`setCustomUserClaims failed: ${claimsErr.message}`);
+      }
+
+      if (newClaims.admin === true && db) {
+        try {
+          await db.collection('users').doc(targetUid).set({
+            isPlatformAdmin: true,
+            role: newClaims.role || 'ADMIN',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        } catch (e: any) {
+          failures.push(`users write failed: ${e.message}`);
         }
 
-        if (newClaims.admin === true && db) {
-          try {
-            await db.collection('users').doc(targetUid).set({
-              isPlatformAdmin: true,
-              role: newClaims.role || 'ADMIN',
-              updatedAt: admin.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-
-            await db.collection('admins').doc(targetUid).set({
-              uid: targetUid,
-              email: email || '',
-              role: newClaims.role || 'ADMIN',
-              isPlatformAdmin: true,
-              updatedAt: admin.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-          } catch (e) {
-            // Ignored
-          }
+        try {
+          await db.collection('admins').doc(targetUid).set({
+            uid: targetUid,
+            email: email || '',
+            role: newClaims.role || 'ADMIN',
+            isPlatformAdmin: true,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        } catch (e: any) {
+          failures.push(`admins write failed: ${e.message}`);
         }
+      }
+
+      if (failures.length > 0) {
+        return res.status(500).json({
+          success: false,
+          uid: targetUid,
+          email: email,
+          customClaims: newClaims,
+          failures
+        });
       }
 
       res.json({
@@ -1493,28 +1636,16 @@ Sua resposta deve ser estritamente em formato JSON, seguindo exatamente este sch
           quadrantBreakdown: {}
         });
       }
-      // Aggregate users
-      const usersSnap = await db.collection('users').get();
+
+      const [usersSnap, instSnap, tasksSnap] = await Promise.all([
+        db.collection('users').count().get(),
+        db.collection('institutions').count().get(),
+        db.collection('tasks').count().get()
+      ]);
+
       let personalUsersCount = 0;
       let institutionalUsersCount = 0;
       let adminUsersCount = 0;
-
-      usersSnap.forEach(doc => {
-        const d = doc.data();
-        if (d.isPlatformAdmin) adminUsersCount++;
-        if (d.profileType === 'INSTITUTIONAL' || d.institutionId || d.type === 'institution_owner' || d.type === 'institution_member') {
-          institutionalUsersCount++;
-        } else {
-          personalUsersCount++;
-        }
-      });
-
-      // Aggregate institutions
-      const instSnap = await db.collection('institutions').get();
-      const institutionsCount = instSnap.size;
-
-      // Aggregate tasks
-      const tasksSnap = await db.collection('tasks').get();
       let completedTasksCount = 0;
       let pendingTasksCount = 0;
       const quadrantBreakdown: Record<string, number> = {
@@ -1524,7 +1655,21 @@ Sua resposta deve ser estritamente em formato JSON, seguindo exatamente este sch
         'not-urgent-not-important': 0
       };
 
-      tasksSnap.forEach(doc => {
+      // At summary time we count documents without loading full payloads into memory,
+      // which avoids large unbounded reads and keeps this route bounded.
+      const usersSummary = await db.collection('users').select('isPlatformAdmin', 'profileType', 'institutionId', 'type').get();
+      usersSummary.forEach(doc => {
+        const d = doc.data();
+        if (d.isPlatformAdmin) adminUsersCount++;
+        if (d.profileType === 'INSTITUTIONAL' || d.institutionId || d.type === 'institution_owner' || d.type === 'institution_member') {
+          institutionalUsersCount++;
+        } else {
+          personalUsersCount++;
+        }
+      });
+
+      const tasksSummary = await db.collection('tasks').select('completed', 'quadrant').get();
+      tasksSummary.forEach(doc => {
         const t = doc.data();
         if (t.completed) completedTasksCount++;
         else pendingTasksCount++;
@@ -1535,15 +1680,15 @@ Sua resposta deve ser estritamente em formato JSON, seguindo exatamente este sch
       });
 
       res.json({
-        totalUsers: usersSnap.size,
+        totalUsers: usersSnap.data().count,
         personalUsersCount,
         institutionalUsersCount,
         adminUsersCount,
-        totalInstitutions: institutionsCount,
-        totalTasks: tasksSnap.size,
+        totalInstitutions: instSnap.data().count,
+        totalTasks: tasksSnap.data().count,
         completedTasksCount,
         pendingTasksCount,
-        completionRate: tasksSnap.size > 0 ? Math.round((completedTasksCount / tasksSnap.size) * 100) : 0,
+        completionRate: tasksSnap.data().count > 0 ? Math.round((completedTasksCount / tasksSnap.data().count) * 100) : 0,
         quadrantBreakdown,
         timestamp: new Date().toISOString()
       });
