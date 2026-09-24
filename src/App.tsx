@@ -419,6 +419,7 @@ export default function App() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [logoURL, setLogoURL] = useState(localStorage.getItem('ohel_custom_logo') || '');
+  const canEditBrandLogo = Boolean(user && (isPlatformAdmin || effectiveUserData?.role === 'ADMIN'));
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1481,8 +1482,8 @@ export default function App() {
               {logoURL ? (
                 <img src={logoURL} alt="Logo OHEL" className="w-full h-full object-cover" />
               ) : 'O'}
-              
-              {effectiveUserData?.role === 'ADMIN' && !isSidebarCollapsed && (
+
+              {canEditBrandLogo && !isSidebarCollapsed && (
                 <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center">
                   <Camera className="w-4 h-4 text-white" />
                   <input type="file" className="hidden" accept="image/*" onChange={(e) => {
@@ -1492,14 +1493,13 @@ export default function App() {
                       reader.onloadend = async () => {
                         const url = reader.result as string;
                         setLogoURL(url);
-                        // Save to settings
                         try {
-                          await setDoc(doc(db, 'settings', 'appearance'), { 
+                          await setDoc(doc(db, 'settings', 'appearance'), {
                             logoURL: url,
-                            updatedBy: user.uid,
+                            updatedBy: user?.uid,
                             updatedAt: Date.now()
                           }, { merge: true });
-                          toast.success('Logo da empresa atualizado!');
+                          toast.success('Logo da empresa atualizada!');
                         } catch (err) {
                           console.error(err);
                         }

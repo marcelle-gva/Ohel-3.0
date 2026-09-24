@@ -13,6 +13,7 @@ import { db } from '@/lib/firebase';
 
 export const AuthSelector: React.FC = () => {
   const { user, loginWithGoogle, validateInviteCode, setProfileType, setViewMode, linkUserToInstitution, joinHousehold } = useAuth();
+  const logoURL = localStorage.getItem('ohel_custom_logo') || '';
   const [step, setStep] = useState<'choice' | 'personal-plans' | 'institution-plans' | 'institutional'>('choice');
   const [inviteCode, setInviteCode] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -167,18 +168,6 @@ export const AuthSelector: React.FC = () => {
         "transition-all duration-500",
         isWideStep ? "max-w-7xl w-full" : "max-w-md w-full"
       )}>
-        <div className="text-center mb-8 space-y-2">
-          <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-primary-foreground font-bold text-3xl mx-auto shadow-lg shadow-primary/20 mb-4"
-          >
-            O
-          </motion.div>
-          <h1 className="text-3xl font-black tracking-tighter uppercase italic">OHEL PLATFORM</h1>
-          <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest">A Ordem no Caos para sua Gestão</p>
-        </div>
-
         <AnimatePresence mode="wait">
           {step === 'choice' ? (
             <motion.div
@@ -186,121 +175,193 @@ export const AuthSelector: React.FC = () => {
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 20, opacity: 0 }}
-              className="space-y-4"
+              className="w-full max-w-5xl"
             >
-              {/* Botão 1: Uso Pessoal (CPF) */}
-              <div className="relative group">
-                <button
-                  id="btn-auth-personal"
-                  onClick={handlePersonalClick}
-                  disabled={isLoggingIn}
-                  className="w-full p-6 bg-card border-2 rounded-2xl shadow-sm hover:shadow-md hover:border-primary/50 transition-all text-left relative overflow-hidden active:scale-[0.99] disabled:opacity-75"
-                >
-                  <div className="absolute top-0 right-0 bg-blue-600 text-white text-[9px] px-3 py-1 font-black uppercase tracking-widest rounded-bl-xl shadow-sm">
-                    CPF • 30 Dias Grátis
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
-                      <User className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1 pr-12">
-                      <h3 className="font-bold text-lg text-foreground flex items-center gap-2">
-                        Uso Pessoal (CPF)
-                        {isLoggingIn && (
-                          <span className="text-xs text-primary font-medium animate-pulse flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
-                            Entrando...
-                          </span>
-                        )}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">Gerencie suas tarefas, foco, finanças e metas individuais.</p>
-                      
-                      <div className="mt-3 flex items-center gap-4 flex-wrap">
-                        <span className="text-xs font-bold text-primary flex items-center gap-1">
-                          {user ? 'Acessar Meu Espaço Pessoal' : 'Entrar com Google (Teste Grátis)'}
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </span>
-                        
-                        {!user && (
-                          <span
-                            role="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setStep('personal-plans');
-                            }}
-                            className="text-[11px] font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors cursor-pointer"
-                          >
-                            Ver detalhes dos planos CPF
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-                  </div>
-                </button>
-              </div>
-
-              {/* Botão 2: Criar Minha Instituição (CNPJ) */}
-              <div className="relative group">
-                <button
-                  id="btn-auth-institution"
-                  onClick={() => setStep('institution-plans')}
-                  disabled={isLoggingIn}
-                  className="w-full p-6 bg-card border-2 rounded-2xl shadow-sm hover:shadow-md hover:border-purple-500/50 transition-all text-left relative overflow-hidden active:scale-[0.99] disabled:opacity-75"
-                >
-                  <div className="absolute top-0 right-0 bg-purple-600 text-white text-[9px] px-3 py-1 font-black uppercase tracking-widest rounded-bl-xl shadow-sm">
-                    CNPJ • 30 Dias Grátis
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors shrink-0">
-                      <ShieldCheck className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1 pr-12">
-                      <h3 className="font-bold text-lg text-foreground">Criar Minha Instituição (CNPJ)</h3>
-                      <p className="text-sm text-muted-foreground">Registre sua equipe, empresa ou organização com teste gratuito corporativo.</p>
-                      
-                      <div className="mt-3 flex items-center gap-4 flex-wrap">
-                        <span className="text-xs font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1">
-                          Ver Planos Institucionais (CNPJ)
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </span>
-
-                        {!user && (
-                          <span
-                            role="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDirectGoogleLogin('institutional');
-                            }}
-                            className="text-[11px] font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors cursor-pointer"
-                          >
-                            Entrar direto com Google (Gestor)
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-purple-600 transition-colors shrink-0" />
-                  </div>
-                </button>
-              </div>
-
-              {/* Botão 3: Membro de Casa ou Instituição (Código de Convite) */}
-              <button
-                id="btn-auth-member"
-                onClick={() => setStep('institutional')}
-                className="w-full p-6 bg-card border rounded-2xl shadow-sm hover:shadow-md hover:border-primary/50 transition-all text-left group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors shrink-0">
-                    <Building2 className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg text-foreground">Tenho um código de convite</h3>
-                    <p className="text-sm text-muted-foreground">De uma Casa (família) ou de uma Instituição — o sistema identifica sozinho.</p>
-                  </div>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              <div className="relative overflow-hidden rounded-[30px] border border-white/10 bg-[#020d1a]/90 px-6 py-6 shadow-[0_0_80px_rgba(59,130,246,0.18)] md:px-8 md:py-8">
+                <div className="pointer-events-none absolute inset-0">
+                  <div className="absolute -left-20 top-8 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
+                  <div className="absolute right-[-60px] top-10 h-80 w-80 rounded-full bg-indigo-500/20 blur-3xl" />
+                  <div className="absolute bottom-0 left-1/2 h-36 w-[120%] -translate-x-1/2 rounded-[50%] bg-cyan-400/10 blur-3xl" />
                 </div>
-              </button>
+
+                <div className="relative z-10">
+                  <div className="mb-6 flex flex-col items-center justify-center text-center">
+                    <div className="mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-cyan-500 shadow-[0_0_30px_rgba(34,211,238,0.25)] sm:h-24 sm:w-24">
+                      {logoURL ? (
+                        <img src={logoURL} alt="Logo OHEL" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-4xl font-black text-slate-950 sm:text-5xl">O</span>
+                      )}
+                    </div>
+
+                    <div className="text-[44px] font-black italic leading-none tracking-[-0.08em] text-white sm:text-[64px]">
+                      OHEL
+                    </div>
+                    <div className="mt-2 inline-flex rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.44em] text-cyan-300 sm:text-[11px]">
+                      Plataforma
+                    </div>
+                  </div>
+
+                  <div className="mb-5 flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-[0.2em] text-cyan-300/90 sm:text-[12px]">
+                    <span className="h-px w-10 bg-gradient-to-r from-transparent to-cyan-300 sm:w-12" />
+                    A Ordem no Caos para sua Gestão
+                    <span className="h-px w-10 bg-gradient-to-l from-transparent to-cyan-300 sm:w-12" />
+                  </div>
+
+                  <div className="text-center">
+                    <h2 className="text-3xl font-black tracking-[-0.06em] text-white md:text-4xl">
+                      Escolha como deseja começar
+                    </h2>
+                    <p className="mt-2 text-base text-slate-300">
+                      Seja para uso pessoal ou para sua empresa, temos o plano ideal para você.
+                    </p>
+                  </div>
+
+                  <div className="mt-8 grid gap-4 md:grid-cols-2">
+                    <button
+                      id="btn-auth-personal"
+                      onClick={handlePersonalClick}
+                      disabled={isLoggingIn}
+                      className="group relative overflow-hidden rounded-[24px] border border-cyan-400/40 bg-[#071b33] p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-[0_0_30px_rgba(34,211,238,0.22)] disabled:opacity-75"
+                    >
+                      <div className="absolute right-0 top-0 rounded-bl-2xl bg-cyan-500 px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-950 shadow-sm">
+                        Mais completo
+                      </div>
+
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-300 ring-1 ring-cyan-400/25 group-hover:bg-cyan-500 group-hover:text-slate-950">
+                          <User className="h-7 w-7" />
+                        </div>
+                        <div className="flex-1 pr-12">
+                          <h3 className="text-2xl font-black tracking-[-0.05em] text-white">Uso Pessoal</h3>
+                          <p className="mt-1 text-sm leading-5 text-slate-300">
+                            Organize sua vida, cuide dos seus hábitos, metas e rotina diária.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 space-y-2 text-sm text-slate-200">
+                        {[
+                          'Módulos essenciais',
+                          'Hábitos e saúde',
+                          'Gestão pessoal',
+                          'Planejamento e foco',
+                        ].map((item) => (
+                          <div key={item} className="flex items-center gap-2">
+                            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-cyan-500/20 text-[10px] text-cyan-300">✓</span>
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-6 flex items-center justify-between">
+                        <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300">
+                          <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-1">Básico</span>
+                          <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-1">Gratuito</span>
+                          <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-1">Pro</span>
+                        </div>
+                        <span className="inline-flex items-center gap-2 rounded-full bg-cyan-500 px-4 py-2 text-sm font-black text-slate-950 transition-transform group-hover:translate-x-0.5">
+                          Selecionar <ArrowRight className="h-4 w-4" />
+                        </span>
+                      </div>
+                    </button>
+
+                    <button
+                      id="btn-auth-institution"
+                      onClick={() => setStep('institution-plans')}
+                      disabled={isLoggingIn}
+                      className="group relative overflow-hidden rounded-[24px] border border-violet-400/40 bg-[#120d2d] p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-[0_0_30px_rgba(168,85,247,0.22)] disabled:opacity-75"
+                    >
+                      <div className="absolute right-0 top-0 rounded-bl-2xl bg-violet-500 px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white shadow-sm">
+                        Mais completo
+                      </div>
+
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-300 ring-1 ring-violet-400/25 group-hover:bg-violet-500 group-hover:text-white">
+                          <ShieldCheck className="h-7 w-7" />
+                        </div>
+                        <div className="flex-1 pr-12">
+                          <h3 className="text-2xl font-black tracking-[-0.05em] text-white">CNPJ</h3>
+                          <p className="mt-1 text-sm leading-5 text-slate-300">
+                            Para empresas, instituições e equipes que precisam de mais controle.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 space-y-2 text-sm text-slate-200">
+                        {[
+                          'Gestão eficiente para equipes',
+                          'Atividades e relatórios',
+                          'Módulos essenciais',
+                          'Controle de acesso e priorização',
+                        ].map((item) => (
+                          <div key={item} className="flex items-center gap-2">
+                            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-violet-500/20 text-[10px] text-violet-300">✓</span>
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-6 flex items-center justify-between">
+                        <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300">
+                          <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2 py-1">Básico</span>
+                          <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2 py-1">Gratuito</span>
+                          <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2 py-1">Pro</span>
+                        </div>
+                        <span className="inline-flex items-center gap-2 rounded-full bg-violet-500 px-4 py-2 text-sm font-black text-white transition-transform group-hover:translate-x-0.5">
+                          Selecionar <ArrowRight className="h-4 w-4" />
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+
+                  <form
+                    onSubmit={handleInstitutionalSubmit}
+                    className="mt-8 flex flex-col gap-3 rounded-[22px] border border-cyan-400/20 bg-[#071b33]/80 px-4 py-4 md:flex-row md:items-center md:justify-between"
+                  >
+                    <div className="flex items-center gap-3 text-left">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300 ring-1 ring-cyan-400/25">
+                        <Building2 className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-black tracking-[-0.04em] text-white">Já tem um código de acesso?</div>
+                        <div className="text-xs text-slate-300">Use o código recebido para entrar em sua casa ou instituição.</div>
+                      </div>
+                    </div>
+
+                    <div className="flex w-full max-w-xl items-center gap-2 md:justify-end">
+                      <Input
+                        value={inviteCode}
+                        onChange={(e) => setInviteCode(e.target.value)}
+                        placeholder="Digite o código de acesso"
+                        className="h-12 rounded-xl border-white/10 bg-slate-950/40 text-white placeholder:text-slate-400"
+                      />
+                      <Button
+                        type="submit"
+                        disabled={isValidating || !inviteCode.trim()}
+                        className="h-12 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 text-sm font-black uppercase tracking-[0.14em] text-slate-950 shadow-lg shadow-cyan-500/20 hover:brightness-110"
+                      >
+                        {isValidating ? 'Validando...' : 'Acessar'}
+                      </Button>
+                    </div>
+                  </form>
+
+                  <div className="mt-8 flex flex-wrap items-center justify-center gap-6 border-t border-white/10 pt-5 text-xs font-black uppercase tracking-[0.18em] text-slate-300">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-cyan-500/10 text-cyan-300">✓</span>
+                      Mais organização
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-500/10 text-violet-300">✓</span>
+                      Mais resultados
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-300">✓</span>
+                      Mais foco
+                    </div>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           ) : step === 'personal-plans' ? (
             /* Tela Exclusiva: Planos Pessoais (CPF) */
