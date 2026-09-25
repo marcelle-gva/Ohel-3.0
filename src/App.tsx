@@ -1212,6 +1212,35 @@ export default function App() {
     }
   };
 
+  const normalizedPlan = (effectiveUserData?.planType || subscription?.planType || 'PERSONAL_BASIC') as string;
+  const userContext: UserContext = contextFromGroup(
+    {
+      type: activeContextType === 'INSTITUTION' || viewMode === 'INSTITUTION_OWNER' || viewMode === 'INSTITUTION_MEMBER' ? 'CNPJ' : 'CPF',
+      planType: normalizedPlan,
+    },
+    {
+      isPlatformAdmin: isPlatformAdmin,
+      activeGroupId: activeContextId,
+      ownedGroupIds: authUserData?.ownedGroupIds,
+      memberOfGroupIds: authUserData?.memberOfGroupIds,
+    }
+  );
+
+  useEffect(() => {
+    const routeAllowed = canAccessView(activeView, userContext, {
+      isMaster,
+      isPersonal,
+      isInstitutionOwner,
+      isMember,
+      hasActiveContext: activeContextType !== 'PERSONAL' && Boolean(activeContextId),
+    });
+
+    if (!routeAllowed && activeView !== 'dashboard') {
+      setActiveView('dashboard');
+      toast.error('Acesso restrito para este plano e pilar.');
+    }
+  }, [activeView, userContext, isMaster, isPersonal, isInstitutionOwner, isMember, activeContextType, activeContextId]);
+
   if (authLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -1271,35 +1300,6 @@ export default function App() {
       </div>
     );
   }
-
-  const normalizedPlan = (effectiveUserData?.planType || subscription?.planType || 'PERSONAL_BASIC') as string;
-  const userContext: UserContext = contextFromGroup(
-    {
-      type: activeContextType === 'INSTITUTION' || viewMode === 'INSTITUTION_OWNER' || viewMode === 'INSTITUTION_MEMBER' ? 'CNPJ' : 'CPF',
-      planType: normalizedPlan,
-    },
-    {
-      isPlatformAdmin: isPlatformAdmin,
-      activeGroupId: activeContextId,
-      ownedGroupIds: authUserData?.ownedGroupIds,
-      memberOfGroupIds: authUserData?.memberOfGroupIds,
-    }
-  );
-
-  useEffect(() => {
-    const routeAllowed = canAccessView(activeView, userContext, {
-      isMaster,
-      isPersonal,
-      isInstitutionOwner,
-      isMember,
-      hasActiveContext: activeContextType !== 'PERSONAL' && Boolean(activeContextId),
-    });
-
-    if (!routeAllowed && activeView !== 'dashboard') {
-      setActiveView('dashboard');
-      toast.error('Acesso restrito para este plano e pilar.');
-    }
-  }, [activeView, userContext, isMaster, isPersonal, isInstitutionOwner, isMember, activeContextType, activeContextId]);
 
   const handleTaskComplete = async (taskId: string, timeSpent: number) => {
     try {
