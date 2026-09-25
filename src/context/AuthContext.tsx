@@ -404,6 +404,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.info('Janela de login fechada antes da conclusão.');
       } else if (error.code === 'auth/operation-not-allowed') {
         toast.error('O login com Google não está ativado no Firebase Console deste projeto.');
+      } else if (error.code === 'auth/configuration-not-found') {
+        toast.error('O Firebase Authentication ainda não foi configurado neste projeto. Ative o Authentication e o provedor Google no Console Firebase.');
       } else {
         toast.error('Erro ao entrar com Google: ' + (error.message || 'Verifique sua conexão.'));
       }
