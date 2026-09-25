@@ -10,10 +10,11 @@ import { PlanSelector } from './PlanSelector';
 import { cn } from '@/lib/utils';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import defaultLogo from '@/assets/ohel-church-logo.png';
 
 export const AuthSelector: React.FC = () => {
   const { user, loginWithGoogle, validateInviteCode, setProfileType, setViewMode, linkUserToInstitution, joinHousehold } = useAuth();
-  const logoURL = localStorage.getItem('ohel_custom_logo') || '';
+  const logoURL = localStorage.getItem('ohel_custom_logo') || defaultLogo;
   const [step, setStep] = useState<'choice' | 'personal-plans' | 'institution-plans' | 'institutional'>('choice');
   const [inviteCode, setInviteCode] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -187,17 +188,11 @@ export const AuthSelector: React.FC = () => {
 
                 <div className="relative z-10">
                   <div className="mb-6 flex flex-col items-center justify-center text-center">
-                    <div className="mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-cyan-500 shadow-[0_0_30px_rgba(34,211,238,0.25)] sm:h-24 sm:w-24">
-                      {logoURL ? (
-                        <img src={logoURL} alt="Logo OHEL" className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="text-4xl font-black text-slate-950 sm:text-5xl">O</span>
-                      )}
-                    </div>
-
-                    <div className="text-[44px] font-black italic leading-none tracking-[-0.08em] text-white sm:text-[64px]">
-                      OHEL
-                    </div>
+                    <img
+                      src={logoURL}
+                      alt="Igreja Pentecostal OHEL"
+                      className="h-auto max-h-32 w-full max-w-[520px] object-contain drop-shadow-[0_0_30px_rgba(34,211,238,0.18)]"
+                    />
                     <div className="mt-2 inline-flex rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.44em] text-cyan-300 sm:text-[11px]">
                       Plataforma
                     </div>

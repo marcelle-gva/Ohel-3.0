@@ -103,6 +103,7 @@ import { SpiritualModule } from '@/components/SpiritualModule';
 import { NotificationBell } from '@/components/NotificationBell';
 import { NotificationsPage } from '@/components/NotificationsPage';
 import { Heart } from 'lucide-react';
+import defaultLogo from '@/assets/ohel-church-logo.png';
 
 import { Dashboard } from '@/components/Dashboard';
 import { MissionsView } from '@/components/MissionsView';
@@ -418,8 +419,40 @@ export default function App() {
   }, [institution]);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [logoURL, setLogoURL] = useState(localStorage.getItem('ohel_custom_logo') || '');
+  const [logoURL, setLogoURL] = useState(localStorage.getItem('ohel_custom_logo') || defaultLogo);
   const canEditBrandLogo = Boolean(user && (isPlatformAdmin || effectiveUserData?.role === 'ADMIN'));
+
+  useEffect(() => {
+    if (!user) return;
+
+    getDoc(doc(db, 'settings', 'appearance')).then((snapshot) => {
+      const storedLogo = snapshot.data()?.logoURL;
+      if (storedLogo) {
+        setLogoURL(storedLogo);
+        localStorage.setItem('ohel_custom_logo', storedLogo);
+      }
+    }).catch((error) => {
+      handleFirestoreError(error, OperationType.GET, 'settings/appearance');
+    });
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (!canEditBrandLogo) return;
+
+    const appearanceRef = doc(db, 'settings', 'appearance');
+    getDoc(appearanceRef).then((snapshot) => {
+      const storedLogo = snapshot.data()?.logoURL;
+      if (!storedLogo || storedLogo.includes('image/svg+xml')) {
+        return setDoc(appearanceRef, {
+          logoURL: defaultLogo,
+          updatedBy: user?.uid,
+          updatedAt: Date.now(),
+        }, { merge: true });
+      }
+    }).catch((error) => {
+      handleFirestoreError(error, OperationType.GET, 'settings/appearance');
+    });
+  }, [canEditBrandLogo, user?.uid]);
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1493,6 +1526,7 @@ export default function App() {
                       reader.onloadend = async () => {
                         const url = reader.result as string;
                         setLogoURL(url);
+                        localStorage.setItem('ohel_custom_logo', url);
                         try {
                           await setDoc(doc(db, 'settings', 'appearance'), {
                             logoURL: url,
