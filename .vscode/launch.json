@@ -7,8 +7,8 @@
         {
             "type": "editor-browser",
             "request": "launch",
-            "name": "Open index.html",
-            "url": "file:///c%3A/Users/marcelle.ayres/Desktop/Ohel-3.0/index.html"
+            "name": "Open OHEL dev server",
+            "url": "http://localhost:3000"
         }
     ]
 }

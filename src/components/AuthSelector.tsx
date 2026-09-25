@@ -59,6 +59,7 @@ export const AuthSelector: React.FC = () => {
       setProfileType(targetProfile);
       setViewMode(targetViewMode);
       await loginWithGoogle();
+      window.location.reload();
     } catch (err: any) {
       // Errors are handled with specific messaging inside loginWithGoogle()
     } finally {
@@ -160,7 +161,7 @@ export const AuthSelector: React.FC = () => {
     }
   };
 
-  const isWideStep = step === 'personal-plans' || step === 'institution-plans';
+  const isWideStep = step === 'choice' || step === 'personal-plans' || step === 'institution-plans';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
@@ -257,7 +258,6 @@ export const AuthSelector: React.FC = () => {
                       <div className="mt-6 flex items-center justify-between">
                         <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300">
                           <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-1">Básico</span>
-                          <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-1">Gratuito</span>
                           <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-1">Pro</span>
                         </div>
                         <span className="inline-flex items-center gap-2 rounded-full bg-cyan-500 px-4 py-2 text-sm font-black text-slate-950 transition-transform group-hover:translate-x-0.5">
@@ -305,7 +305,6 @@ export const AuthSelector: React.FC = () => {
                       <div className="mt-6 flex items-center justify-between">
                         <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300">
                           <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2 py-1">Básico</span>
-                          <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2 py-1">Gratuito</span>
                           <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2 py-1">Pro</span>
                         </div>
                         <span className="inline-flex items-center gap-2 rounded-full bg-violet-500 px-4 py-2 text-sm font-black text-white transition-transform group-hover:translate-x-0.5">

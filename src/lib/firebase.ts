@@ -10,6 +10,7 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || localConfig.storageBucket,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || localConfig.messagingSenderId,
   appId: import.meta.env.VITE_FIREBASE_APP_ID || localConfig.appId,
+  measurementId: localConfig.measurementId,
 };
 
 const firestoreDatabaseId = localConfig.firestoreDatabaseId || '(default)';
