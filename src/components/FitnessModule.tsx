@@ -542,9 +542,6 @@ export const FitnessModule: React.FC<FitnessModuleProps> = ({ userId }) => {
           <TabsTrigger value="habits" className="rounded-lg gap-2">
             <Zap className="w-4 h-4" /> Hábitos & Saúde
           </TabsTrigger>
-          <TabsTrigger value="mental-dump" className="rounded-lg gap-2 text-blue-600 dark:text-blue-400 font-bold">
-            <Brain className="w-4 h-4" /> Descarrego Mental & Humor IA
-          </TabsTrigger>
           <TabsTrigger value="menu" className="rounded-lg gap-2">
             <Utensils className="w-4 h-4" /> Cardápio & Calorias
           </TabsTrigger>

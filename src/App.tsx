@@ -1402,7 +1402,6 @@ export default function App() {
 
   const sidebarDefinitions = [
     { id: 'dashboard' as View, label: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' as const },
-    { id: 'agent' as View, label: 'Agente OHEL', icon: Sparkles, isNew: true, key: 'agente-ohel' as const },
     { id: 'calendar' as View, label: 'Minhas Tarefas', icon: CalendarIcon, key: 'minhas-tarefas' as const },
     { id: 'messages' as View, label: 'Mensagens', icon: MessageSquare, key: 'mensagens' as const },
     { id: 'ordem-no-caos' as View, label: 'Ordem no Caos', icon: Layers, key: 'ordem-no-caos' as const },
