@@ -161,17 +161,17 @@ export const ProfessionalModule: React.FC<ProfessionalModuleProps> = ({ userId, 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary border border-primary/20">
           <Briefcase className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Módulo Profissional</h2>
-          <p className="text-muted-foreground">Gestão de equipe, grupos e produtividade corporativa.</p>
+          <h2 className="text-3xl font-bold tracking-tight text-primary">Módulo Profissional</h2>
+          <p className="text-white">Gestão de equipe, grupos e produtividade corporativa.</p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-muted/50 p-1 rounded-xl">
+        <TabsList className="bg-primary/5 border border-primary/15 p-1 rounded-xl">
           <TabsTrigger value="team" className="rounded-lg gap-2">
             <Users className="w-4 h-4" /> Equipe & Usuários
           </TabsTrigger>
@@ -182,10 +182,10 @@ export const ProfessionalModule: React.FC<ProfessionalModuleProps> = ({ userId, 
 
         <TabsContent value="team" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="md:col-span-1">
+            <Card className="md:col-span-1 border border-primary/20 bg-primary/5">
               <CardHeader>
                 <CardTitle>Criar Novo Grupo</CardTitle>
-                <CardDescription>Ex: Administrativo, Comercial, RH</CardDescription>
+                <CardDescription className="text-white">Ex: Administrativo, Comercial, RH</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -199,14 +199,14 @@ export const ProfessionalModule: React.FC<ProfessionalModuleProps> = ({ userId, 
             </Card>
 
             <div className="md:col-span-2 space-y-6">
-              <Card>
+              <Card className="border border-primary/20 bg-primary/5">
                 <CardHeader>
                   <CardTitle>Grupos e Departamentos</CardTitle>
-                  <CardDescription>Gerencie membros e permissões por setor</CardDescription>
+                  <CardDescription className="text-white">Gerencie membros e permissões por setor</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {groups.map(group => (
-                    <div key={group.id} className="border rounded-2xl p-4 bg-muted/5">
+                      <div key={group.id} className="border border-primary/15 rounded-2xl p-4 bg-primary/5">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                           <Users className="w-5 h-5 text-primary" />
@@ -253,15 +253,15 @@ export const ProfessionalModule: React.FC<ProfessionalModuleProps> = ({ userId, 
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border border-primary/20 bg-primary/5">
                 <CardHeader>
                   <CardTitle>Usuários da Instituição</CardTitle>
-                  <CardDescription>Membros cadastrados e status em tempo real</CardDescription>
+                  <CardDescription className="text-white">Membros cadastrados e status em tempo real</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {teamUsers.map(u => (
-                      <div key={u.id} className="p-4 border rounded-2xl flex items-center gap-4 bg-muted/10">
+                      <div key={u.id} className="p-4 border border-primary/15 rounded-2xl flex items-center gap-4 bg-primary/5">
                         <div className="relative">
                           <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
                             {u.photoURL ? <img src={u.photoURL} className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" /> : u.name.charAt(0)}
@@ -288,10 +288,10 @@ export const ProfessionalModule: React.FC<ProfessionalModuleProps> = ({ userId, 
         </TabsContent>
 
         <TabsContent value="chat" className="space-y-6">
-          <Card className="h-[600px] flex flex-col overflow-hidden">
+          <Card className="h-[600px] flex flex-col overflow-hidden border border-primary/20 bg-primary/5">
             <div className="flex h-full">
               {/* Sidebar Members */}
-              <div className="w-64 border-r bg-muted/10 flex flex-col">
+              <div className="w-64 border-r border-primary/20 bg-primary/5 flex flex-col">
                 <div className="p-4 border-b font-bold text-sm uppercase tracking-wider">Membros</div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
                   {teamUsers.map(u => (
@@ -323,7 +323,7 @@ export const ProfessionalModule: React.FC<ProfessionalModuleProps> = ({ userId, 
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-lg">Canal Geral da Equipe</CardTitle>
-                      <CardDescription className="text-xs">Comunicação e avisos da instituição</CardDescription>
+                      <CardDescription className="text-xs text-white">Comunicação e avisos da instituição</CardDescription>
                     </div>
                     <Badge variant="outline" className="text-xs">
                       {channelMessages.length} mensagens

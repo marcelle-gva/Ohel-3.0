@@ -12,6 +12,7 @@ import type React from 'react';
 // recognizably "the same color family" as the icon.
 export const PILLAR_ACCENT: Record<string, string> = {
   familiar: '#7e22ce', // purple-700 (icon uses purple-500)
+  pessoal: '#0369a1', // cyan-700 (icon uses sky-400)
   fitness: '#15803d', // green-700 (icon uses green-500) — Pessoal/Fitness pillar
   financeiro: '#047857', // emerald-700 (icon uses emerald-500) — Financeiro, personal profile
   profissional: '#1d4ed8', // blue-700 (icon uses blue-500) — Profissional, institutional profile

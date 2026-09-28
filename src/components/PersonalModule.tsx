@@ -192,7 +192,7 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
           </div>
             <div>
             <h2 className="text-2xl font-bold uppercase tracking-tight text-primary leading-none">PILAR FAMILIAR</h2>
-            <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-70">O coração da sua casa e memórias da sua família</p>
+            <p className="text-[10px] uppercase font-black tracking-widest text-white opacity-90">O coração da sua casa e memórias da sua família</p>
           </div>
         </div>
       </div>
@@ -275,7 +275,7 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
                       const dateB = b.date?.seconds || 0;
                       return dateB - dateA;
                     }).map((item: any) => (
-                      <Card key={item.id} className="border-2 border-primary/5 hover:border-primary/20 transition-all group rounded-2xl bg-card overflow-hidden">
+                      <Card key={item.id} className="border-2 border-primary/15 hover:border-primary/30 transition-all group rounded-2xl bg-primary/5 overflow-hidden">
                         <CardHeader className="p-4">
                           <div className="flex items-center justify-between mb-2">
                             <Badge variant="outline" className={cn(
@@ -347,10 +347,10 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
                 </CardContent>
               </Card>
 
-              <Card className="border-2 border-amber-500/10 bg-amber-500/5 rounded-[32px]">
+              <Card className="border-2 border-purple-500/15 bg-purple-500/5 rounded-[32px]">
                 <CardHeader className="space-y-1">
-                  <CardTitle className="text-[10px] uppercase font-black tracking-widest text-amber-600">Dica de Gestão</CardTitle>
-                  <CardDescription className="text-amber-800 font-bold leading-tight">Mantenha o mural atualizado para reduzir o estresse mental de todos em casa.</CardDescription>
+                  <CardTitle className="text-[10px] uppercase font-black tracking-widest text-purple-400">Dica de Gestão</CardTitle>
+                  <CardDescription className="text-white font-bold leading-tight">Mantenha o mural atualizado para reduzir o estresse mental de todos em casa.</CardDescription>
                 </CardHeader>
               </Card>
             </div>

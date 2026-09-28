@@ -222,7 +222,7 @@ export const SpiritualModule: React.FC<SpiritualModuleProps> = ({ userId, onAddT
         </div>
         <div>
           <h2 className="text-2xl font-bold uppercase tracking-tight leading-none" style={{ color: PILAR_CONFIG.ESPIRITUAL.cor }}>Pilar Espiritual</h2>
-          <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-70">{PILAR_CONFIG.ESPIRITUAL.subtitulo}</p>
+          <p className="text-[10px] uppercase font-black tracking-widest text-white opacity-90">{PILAR_CONFIG.ESPIRITUAL.subtitulo}</p>
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -51,6 +51,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
+import { PILAR_CONFIG } from '@/config/permissions';
 
 interface FitnessModuleProps {
   userId: string;
@@ -532,12 +533,12 @@ export const FitnessModule: React.FC<FitnessModuleProps> = ({ userId, activeTab:
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500">
+        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary border border-primary/20">
           <Activity className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Pilar Pessoal</h2>
-          <p className="text-muted-foreground">Descarrego mental com IA, humor, hábitos, alimentação e treinos.</p>
+          <h2 className="text-3xl font-bold tracking-tight" style={{ color: PILAR_CONFIG.PESSOAL.cor }}>Pilar Pessoal</h2>
+          <p className="text-white">{PILAR_CONFIG.PESSOAL.subtitulo}</p>
         </div>
       </div>
 
@@ -1203,7 +1204,7 @@ export const FitnessModule: React.FC<FitnessModuleProps> = ({ userId, activeTab:
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Water Control */}
-            <Card className="border-blue-500/20 bg-blue-500/5">
+            <Card className="border-primary/20 bg-primary/5">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Droplets className="w-5 h-5 text-blue-500" />
@@ -1231,10 +1232,10 @@ export const FitnessModule: React.FC<FitnessModuleProps> = ({ userId, activeTab:
             </Card>
 
             {/* Well-being Logs */}
-            <Card>
+            <Card className="border-primary/20 bg-primary/5">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Smile className="w-5 h-5 text-amber-500" />
+                  <Smile className="w-5 h-5 text-primary" />
                   Estado de Espírito
                 </CardTitle>
                 <CardDescription>Como você se sente hoje?</CardDescription>
@@ -1283,10 +1284,10 @@ export const FitnessModule: React.FC<FitnessModuleProps> = ({ userId, activeTab:
             </Card>
 
             {/* Steps & Habits */}
-            <Card className="border-green-500/20 bg-green-500/5">
+            <Card className="border-primary/20 bg-primary/5">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-green-500" />
+                  <TrendingUp className="w-5 h-5 text-primary" />
                   Metas Diárias
                 </CardTitle>
                 <CardDescription>Pequenas vitórias, grandes resultados</CardDescription>
@@ -1319,7 +1320,7 @@ export const FitnessModule: React.FC<FitnessModuleProps> = ({ userId, activeTab:
 
         <TabsContent value="menu" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-1">
+            <Card className="lg:col-span-1 border border-primary/20 bg-primary/5">
               <CardHeader>
                 <CardTitle>Contador de Calorias</CardTitle>
                 <CardDescription>Busque alimentos e registre seu consumo</CardDescription>
@@ -1385,7 +1386,7 @@ export const FitnessModule: React.FC<FitnessModuleProps> = ({ userId, activeTab:
               </CardContent>
             </Card>
 
-            <Card className="lg:col-span-2">
+            <Card className="lg:col-span-2 border border-primary/20 bg-primary/5">
               <CardHeader>
                 <CardTitle>Cardápio Semanal</CardTitle>
                 <CardDescription>Planeje suas refeições para a semana</CardDescription>
@@ -1408,7 +1409,7 @@ export const FitnessModule: React.FC<FitnessModuleProps> = ({ userId, activeTab:
         </TabsContent>
 
         <TabsContent value="fitness" className="space-y-6">
-          <Card>
+          <Card className="border border-primary/20 bg-primary/5">
             <CardHeader>
               <CardTitle>Treino Semanal</CardTitle>
               <CardDescription>Sua rotina de exercícios planejada</CardDescription>
