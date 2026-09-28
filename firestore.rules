@@ -12,7 +12,6 @@ service cloud.firestore {
     // Platform Admin (root) verification.
     function isPlatformAdmin() {
       return isSignedIn() && (
-        (request.auth.token.get('email', '') in ['marcelle.gomesvieira.ayres@gmail.com', 'admin@ohel.app']) ||
         request.auth.token.get('admin', false) == true ||
         request.auth.token.get('isPlatformAdmin', false) == true ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))

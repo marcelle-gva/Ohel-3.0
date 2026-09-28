@@ -2345,31 +2345,7 @@ export default function App() {
               ) : activeView === 'profissional' ? (
                 <ProfessionalModule userId={user.uid} institutionId={effectiveUser?.institutionId} defaultTab={professionalDefaultTab} />
               ) : activeView === 'pessoal' ? (
-                <PersonalModule 
-                  userId={user.uid} 
-                  tasks={tasks.filter(t => t.moduleId === 'familiar')} 
-                  onTaskComplete={handleTaskComplete} 
-                  onDeleteTask={deleteTask}
-                  addTask={addTask}
-                  onOpenAddTask={(initialData) => {
-                    if (initialData?.quadrant) {
-                      setActiveQuadrant(initialData.quadrant);
-                    }
-                    setTaskDialogTitle(initialData?.title?.includes('Evento') ? 'Criar Novo Evento' : 'Criar Nova Tarefa');
-                    setSelectedTask(initialData ? {
-                      id: '',
-                      title: initialData.title || '',
-                      description: initialData.description || '',
-                      quadrant: initialData.quadrant || 'important-not-urgent',
-                      status: 'PENDING',
-                      completed: false,
-                      createdAt: Date.now(),
-                      type: 'PERSONAL',
-                      moduleId: initialData.moduleId || 'familiar',
-                    } : null);
-                    setIsDialogOpen(true);
-                  }}
-                />
+                <FitnessModule userId={user.uid} />
               ) : activeView === 'familiar' ? (
                 <PersonalModule 
                   userId={user.uid} 

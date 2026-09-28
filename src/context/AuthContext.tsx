@@ -289,15 +289,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const newUserType: 'personal' | 'institution_owner' | 'institution_member' = 
                       pendingType === 'institutional' ? (pendingInvite ? 'institution_member' : 'institution_owner') : 'personal';
 
-                    const isBootstrapAdmin = currentUser.email === 'marcelle.gomesvieira.ayres@gmail.com' || currentUser.email === 'admin@ohel.app';
                     await setDoc(userDocRef, {
                       id: currentUser.uid,
                       name: currentUser.displayName || 'Usuário',
                       email: currentUser.email,
-                      role: isBootstrapAdmin ? 'ADMIN' : (newUserType === 'institution_owner' ? 'ADMIN' : 'MEMBER'),
+                      role: newUserType === 'institution_owner' ? 'ADMIN' : 'MEMBER',
                       type: newUserType,
                       planType: pendingPlan || 'PERSONAL_BASIC',
-                      isPlatformAdmin: isBootstrapAdmin || Boolean(tokenResult.claims.admin),
+                      isPlatformAdmin: Boolean(tokenResult.claims.admin),
                       activeModules: ['matrix', 'focus', 'personal', 'financial', 'family', 'professional', 'spiritual'],
                       createdAt: serverTimestamp()
                     });
@@ -489,9 +488,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isPlatformAdmin = Boolean(
-    user?.email === 'marcelle.gomesvieira.ayres@gmail.com' ||
-    user?.email === 'admin@ohel.app' ||
-    userData?.isPlatformAdmin || 
+    userData?.isPlatformAdmin ||
     userData?.role === 'ADMIN' ||
     customClaims?.admin
   );

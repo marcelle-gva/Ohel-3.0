@@ -28,7 +28,12 @@ if (!admin.apps.length) {
   }
 }
 
-const targetEmail = process.argv[2] || process.env.ADMIN_EMAIL || 'marcelle.gomesvieira.ayres@gmail.com';
+const targetEmail = process.argv[2] || process.env.ADMIN_EMAIL;
+
+if (!targetEmail) {
+  console.error('\n❌ Erro: informe um e-mail via argumento ou variável ADMIN_EMAIL.');
+  process.exit(1);
+}
 
 async function setAdminClaim(email: string) {
   try {

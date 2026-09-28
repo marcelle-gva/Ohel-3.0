@@ -1445,7 +1445,7 @@ Sua resposta deve ser estritamente em formato JSON, seguindo exatamente este sch
       if (!configuredAdmin) {
         throw new Error('ADMIN_EMAIL is required in production.');
       }
-      const isTargetAdmin = email === configuredAdmin || email === 'admin@ohel.app';
+      const isTargetAdmin = email === configuredAdmin;
 
       // Check Firestore users document if server DB available
       let targetUid = uid;

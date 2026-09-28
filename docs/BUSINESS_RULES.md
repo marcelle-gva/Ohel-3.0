@@ -160,7 +160,7 @@ Ganhou `institutionId` obrigatório pra leitura ser restrita a membros daquela i
 
 ## 8. Root / Admin da plataforma
 
-- E-mail root: `marcelle.gomesvieira.ayres@gmail.com` (ver `isPlatformAdmin()` no `firestore.rules` — também aceita um claim `admin`/`isPlatformAdmin` no token, ou doc em `admins/{uid}`, pra não depender só do e-mail hardcoded no futuro).
+- Administrador da plataforma: e-mail configurado via variável de ambiente `ADMIN_EMAIL` em produção, com fallback para claim `admin`/`isPlatformAdmin` no token ou um documento `admins/{uid}` para evitar dependência de e-mail fixo no código.
 - Visão global: `GlobalPlatformDashboard.tsx` + `GET /api/admin/global-summary`.
 - Simulação de plano (`viewAsPlanOverride`, em `ConnectionsSettings.tsx`): **só afeta o que a UI mostra pro próprio root**, nunca cobrança real nem limites de verdade no backend.
 
