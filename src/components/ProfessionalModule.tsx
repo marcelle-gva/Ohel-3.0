@@ -166,7 +166,7 @@ export const ProfessionalModule: React.FC<ProfessionalModuleProps> = ({ userId, 
         </div>
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-primary">Módulo Profissional</h2>
-          <p className="text-white">Gestão de equipe, grupos e produtividade corporativa.</p>
+          <p className="text-[10px] uppercase font-black tracking-widest text-white opacity-90">Gestão de equipe, grupos e produtividade corporativa.</p>
         </div>
       </div>
 

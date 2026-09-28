@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { FileText, DollarSign, ClipboardList, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { FileText, DollarSign, Home, ClipboardList, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
@@ -63,10 +63,10 @@ export const HouseholdOverviewDashboard: React.FC<HouseholdOverviewDashboardProp
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary border border-primary/20">
-          <ClipboardList className="w-6 h-6" />
+          <Home className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold uppercase tracking-tight text-primary leading-none">Gestão Pessoal</h2>
+          <h2 className="text-2xl font-bold uppercase tracking-tight text-primary leading-none">Gestão da Casa</h2>
           <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-70">Resumo da casa e do todo familiar</p>
         </div>
       </div>

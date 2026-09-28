@@ -538,7 +538,7 @@ export const FitnessModule: React.FC<FitnessModuleProps> = ({ userId, activeTab:
         </div>
         <div>
           <h2 className="text-3xl font-bold tracking-tight" style={{ color: PILAR_CONFIG.PESSOAL.cor }}>Pilar Pessoal</h2>
-          <p className="text-white">{PILAR_CONFIG.PESSOAL.subtitulo}</p>
+          <p className="text-[10px] uppercase font-black tracking-widest text-white opacity-90">{PILAR_CONFIG.PESSOAL.subtitulo}</p>
         </div>
       </div>
 

@@ -1411,7 +1411,7 @@ export default function App() {
     { id: 'calendar' as View, label: 'Minhas Tarefas', icon: CalendarIcon, key: 'minhas-tarefas' as const },
     { id: 'messages' as View, label: 'Mensagens', icon: MessageSquare, key: 'mensagens' as const },
     { id: 'ordem-no-caos' as View, label: 'Ordem no Caos', icon: Layers, key: 'ordem-no-caos' as const },
-    { id: 'documentos' as View, label: 'Gestão Pessoal', icon: FileText, key: 'gestao-pessoal' as const, showWhen: (ctx: UserContext) => MENU_RULES['gestao-pessoal'](ctx) },
+    { id: 'documentos' as View, label: 'Gestão da Casa', icon: Home, key: 'gestao-pessoal' as const, showWhen: (ctx: UserContext) => MENU_RULES['gestao-pessoal'](ctx) },
     { id: 'institution' as View, label: 'Gestão Institucional', icon: Building2, key: 'gestao-institucional' as const, showWhen: (ctx: UserContext) => MENU_RULES['gestao-institucional'](ctx) },
     { id: 'global-platform' as View, label: 'Visão Global', icon: Globe, isNew: true, key: 'visao-global' as const, showWhen: (ctx: UserContext) => MENU_RULES['visao-global'](ctx) },
   ];
@@ -1419,7 +1419,8 @@ export default function App() {
   const sidebarItems: { id: View; label: string; icon: any; isNew?: boolean }[] = sidebarDefinitions
     .filter((item) => !item.showWhen || item.showWhen(userContext))
     .filter((item) => (item.key ? MENU_RULES[item.key](userContext) : true))
-    .map(({ id, label, icon, isNew }) => ({ id, label, icon, isNew }));
+    .map(({ id, label, icon, isNew }) => ({ id, label, icon, isNew }))
+    .sort((left, right) => Number(left.id === 'documentos') - Number(right.id === 'documentos'));
 
   const activePillar = PILARES.find((pillar) => PILAR_VIEW_MAP[pillar] === activeView) || null;
   const activePillarTabs = activePillar ? PILAR_TAB_CONFIG[activePillar].tabs : [];
@@ -1454,10 +1455,10 @@ export default function App() {
                   if (mobile) setIsMobileMenuOpen(false);
                 }}
                 className={cn(
-                  'w-full rounded-md px-3 py-2 text-left text-xs transition-colors',
-                  isSelected ? 'font-bold' : 'font-medium text-muted-foreground hover:text-foreground'
+                  'w-full rounded-md px-3 py-2 text-left text-[10px] uppercase tracking-widest font-black transition-colors hover:bg-primary/10',
+                  isSelected && 'bg-primary/10'
                 )}
-                style={isSelected ? { color, backgroundColor: `${color}1A` } : undefined}
+                style={{ color, backgroundColor: isSelected ? `${color}1A` : undefined }}
               >
                 {tab.label}
               </button>
