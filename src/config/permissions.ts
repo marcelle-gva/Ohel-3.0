@@ -103,7 +103,7 @@ export const PILAR_CONFIG: Record<
     cor: '#a855f7',
     label: 'Pilar Familiar',
     subtitulo: 'O coração da sua casa e memórias da sua família',
-    abas: ['Mural da Família', 'Álbum da Família', 'Finanças da Casa'],
+    abas: ['Mural da Família', 'Álbum da Família', 'Finanças da Casa', 'Documentos da Casa'],
   },
   PESSOAL: {
     cor: '#38bdf8',
@@ -135,6 +135,7 @@ export const PILAR_TAB_CONFIG: Record<
       { key: 'familiar', label: 'Mural da Família' },
       { key: 'album', label: 'Álbum da Família' },
       { key: 'finance', label: 'Finanças da Casa' },
+      { key: 'documents', label: 'Documentos da Casa' },
     ],
   },
   PESSOAL: {

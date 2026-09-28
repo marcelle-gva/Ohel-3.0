@@ -60,18 +60,18 @@ export const PersonalFinanceModule: React.FC<PersonalFinanceModuleProps> = ({ us
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 bg-green-500/10 rounded-2xl flex items-center justify-center text-green-500 border border-green-500/20">
+        <div className="w-12 h-12 bg-purple-500/15 rounded-2xl flex items-center justify-center text-green-500 border border-purple-500/30">
           <DollarSign className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold uppercase tracking-tight text-primary leading-none">Finanças da Casa</h2>
+          <h2 className="text-2xl font-bold uppercase tracking-tight text-white leading-none">Finanças da Casa</h2>
           <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-70">Controle de entradas e saídas do lar</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-1 border-green-500/20 bg-green-500/5 rounded-[2rem]">
-          <CardHeader>
+        <Card className="lg:col-span-1 border-purple-500/20 bg-purple-500/5 rounded-[2rem]">
+          <CardHeader className="rounded-t-[2rem] bg-purple-500/10">
             <CardTitle className="text-xl font-bold uppercase tracking-tight">Lançamento</CardTitle>
             <CardDescription className="text-xs uppercase font-bold tracking-widest opacity-60">Novo registro financeiro</CardDescription>
           </CardHeader>
@@ -126,8 +126,8 @@ export const PersonalFinanceModule: React.FC<PersonalFinanceModuleProps> = ({ us
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2 rounded-[2rem] overflow-hidden border-2 border-muted/50">
-          <CardHeader className="border-b bg-muted/5">
+        <Card className="lg:col-span-2 rounded-[2rem] overflow-hidden border-2 border-purple-500/20 bg-purple-500/5">
+          <CardHeader className="border-b border-purple-500/15 bg-purple-500/10">
             <CardTitle className="text-xl font-bold uppercase tracking-tight">Extrato do Lar</CardTitle>
             <CardDescription className="text-xs uppercase font-bold tracking-widest opacity-60">Histórico de movimentações</CardDescription>
           </CardHeader>

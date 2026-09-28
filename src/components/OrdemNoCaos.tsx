@@ -19,6 +19,7 @@ const PillarCard: React.FC<PillarCardProps> = ({ title, description, icon, color
     whileTap={!disabled ? { scale: 0.98 } : {}}
     onClick={onClick}
     disabled={disabled}
+    style={{ '--pillar-color': color } as React.CSSProperties}
     className={cn(
       'relative overflow-hidden group p-6 rounded-2xl border border-border/50 bg-card text-left transition-all glow-blue flex flex-col h-64',
       disabled ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:border-primary/50'
@@ -31,7 +32,7 @@ const PillarCard: React.FC<PillarCardProps> = ({ title, description, icon, color
       {disabled ? <Lock className="w-6 h-6" /> : icon}
     </div>
     <div className="flex-1">
-      <h3 className="text-2xl font-black italic tracking-tighter uppercase mb-2 group-hover:text-primary transition-colors leading-none">{title}</h3>
+      <h3 className="text-2xl font-black italic tracking-tighter uppercase mb-2 group-hover:text-[var(--pillar-color)] transition-colors leading-none">{title}</h3>
       <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
     </div>
 

@@ -99,6 +99,14 @@ export const DocumentsModule: React.FC<DocumentsModuleProps> = ({ userId }) => {
                 onChange={handleFileUpload} 
                 accept=".pdf,.jpg,.jpeg,.png"
               />
+              <input
+                id="doc-camera-scan"
+                type="file"
+                className="hidden"
+                onChange={handleFileUpload}
+                accept="image/*"
+                capture="environment"
+              />
               <FileUp className="w-10 h-10 text-muted-foreground transition-transform group-hover:-translate-y-1" />
               <div>
                 <p className="font-bold text-sm uppercase tracking-tight">Arraste ou clique para enviar</p>
@@ -108,6 +116,11 @@ export const DocumentsModule: React.FC<DocumentsModuleProps> = ({ userId }) => {
                 <label htmlFor="doc-upload">
                   {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Selecionar Arquivo
+                </label>
+              </Button>
+              <Button asChild variant="outline" className="rounded-xl font-black uppercase tracking-widest text-[10px] h-10 px-6 cursor-pointer">
+                <label htmlFor="doc-camera-scan">
+                  <Camera className="w-4 h-4 mr-2" /> Escanear com Câmera
                 </label>
               </Button>
             </div>
