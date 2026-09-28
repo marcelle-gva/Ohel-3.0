@@ -17,6 +17,7 @@ import {
   DialogDescription, 
 } from '@/components/ui/dialog';
 import { PomodoroTimer } from './PomodoroTimer';
+import { PersonalFinanceModule } from '@/components/PersonalFinanceModule';
 import { Task, EisenhowerQuadrant as TaskQuadrant } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -233,6 +234,9 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
           <TabsTrigger value="album" className="rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest px-6 py-2.5">
             <ImageIcon className="w-4 h-4" /> Álbum da Família
           </TabsTrigger>
+          <TabsTrigger value="finance" className="rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest px-6 py-2.5">
+            <DollarSign className="w-4 h-4" /> Finanças da Casa
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="familiar" className="space-y-8">
@@ -411,6 +415,10 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
               </Card>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="finance" className="space-y-6">
+          <PersonalFinanceModule userId={userId} />
         </TabsContent>
 
         <TabsContent value="album" className="space-y-6">

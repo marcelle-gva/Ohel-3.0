@@ -2374,7 +2374,7 @@ export default function App() {
               ) : activeView === 'espiritual' ? (
                 <SpiritualModule userId={user.uid} />
               ) : activeView === 'documentos' ? (
-                <DocumentsModule userId={user.uid} />
+                <PersonalFinanceModule userId={user.uid} />
               ) : activeView === 'fitness' ? (
                 <FitnessModule userId={user.uid} />
               ) : activeView === 'biblioteca' ? (
