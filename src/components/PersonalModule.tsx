@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Home, Calendar, ClipboardList, Heart, Plus, Trash2, DollarSign, ArrowUpRight, ArrowDownRight, FileText, Image as ImageIcon, Target, LayoutDashboard, Clock, FileUp, Camera, Loader2 } from 'lucide-react';
+import { Users, Calendar, ClipboardList, Heart, Plus, Trash2, DollarSign, ArrowUpRight, ArrowDownRight, FileText, Image as ImageIcon, Target, LayoutDashboard, Clock, FileUp, Camera, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Dialog, 
@@ -217,10 +217,10 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-500 border border-purple-500/20">
-            <Home className="w-6 h-6" />
+            <Users className="w-6 h-6" />
           </div>
             <div>
-            <h2 className="text-3xl font-black italic tracking-tighter uppercase text-primary leading-none">PILAR FAMILIAR</h2>
+            <h2 className="text-2xl font-bold uppercase tracking-tight text-primary leading-none">PILAR FAMILIAR</h2>
             <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-70">O coração da sua casa e memórias da sua família</p>
           </div>
         </div>

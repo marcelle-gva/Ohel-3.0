@@ -64,8 +64,8 @@ export const PersonalFinanceModule: React.FC<PersonalFinanceModuleProps> = ({ us
           <DollarSign className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-3xl font-black italic tracking-tighter uppercase text-primary leading-none">Financeiro Pessoal</h2>
-          <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-70">Controle de Entradas e Saídas do Lar</p>
+          <h2 className="text-2xl font-bold uppercase tracking-tight text-primary leading-none">Finanças da Casa</h2>
+          <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-70">Controle de entradas e saídas do lar</p>
         </div>
       </div>
 

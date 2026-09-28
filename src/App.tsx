@@ -117,6 +117,7 @@ import { PersonalModule } from '@/components/PersonalModule';
 import { FitnessModule } from '@/components/FitnessModule';
 import { LibraryModule } from '@/components/LibraryModule';
 import { PersonalFinanceModule } from '@/components/PersonalFinanceModule';
+import { HouseholdOverviewDashboard } from '@/components/HouseholdOverviewDashboard';
 import { DocumentsModule } from '@/components/DocumentsModule';
 import { OhelAgentView } from '@/components/OhelAgentView';
 import { VideoCall } from '@/components/VideoCall';
@@ -2374,7 +2375,7 @@ export default function App() {
               ) : activeView === 'espiritual' ? (
                 <SpiritualModule userId={user.uid} />
               ) : activeView === 'documentos' ? (
-                <PersonalFinanceModule userId={user.uid} />
+                <HouseholdOverviewDashboard userId={user.uid} tasks={tasks} />
               ) : activeView === 'fitness' ? (
                 <FitnessModule userId={user.uid} />
               ) : activeView === 'biblioteca' ? (
