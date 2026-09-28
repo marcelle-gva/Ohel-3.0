@@ -104,7 +104,6 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { NotificationsPage } from '@/components/NotificationsPage';
 import { Heart } from 'lucide-react';
 import defaultLogo from '@/assets/ohel-menu-logo.png';
-import legacyDefaultLogo from '@/assets/ohel-church-logo.png';
 
 import { Dashboard } from '@/components/Dashboard';
 import { MissionsView } from '@/components/MissionsView';
@@ -156,9 +155,7 @@ import {
 
 const INITIAL_TASKS: Task[] = [];
 const APP_VERSION = '2026.04.20.1510'; // Controle de Versão OHEL
-
-const isLegacyDefaultLogo = (logo: string | null | undefined) =>
-  Boolean(logo && (logo === legacyDefaultLogo || logo.includes('ohel-church-logo')));
+const MENU_LOGO_VERSION = 'horizontal-v1';
 
 type View = 'dashboard' | 'matrix' | 'stats' | 'modules' | 'institution' | 'household' | 'ranking' | 'pillar-connections' | 'plans' | 'finance' | 'spiritual' | 'espiritual' | 'notifications' | 'ordem-no-caos' | 'familiar' | 'pessoal' | 'profissional' | 'biblioteca' | 'fitness' | 'calendar' | 'missions' | 'logistics' | 'messages' | 'profile' | 'admin-panel' | 'video-call' | 'templates' | 'documentos' | 'agent' | 'global-platform';
 
@@ -430,8 +427,14 @@ export default function App() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [logoURL, setLogoURL] = useState(() => {
+    const logoVersion = localStorage.getItem('ohel_menu_logo_version');
     const storedLogo = localStorage.getItem('ohel_custom_logo');
-    return storedLogo && !isLegacyDefaultLogo(storedLogo) ? storedLogo : defaultLogo;
+    if (logoVersion !== MENU_LOGO_VERSION) {
+      localStorage.setItem('ohel_menu_logo_version', MENU_LOGO_VERSION);
+      localStorage.setItem('ohel_custom_logo', defaultLogo);
+      return defaultLogo;
+    }
+    return storedLogo || defaultLogo;
   });
   const canEditBrandLogo = Boolean(user && (isPlatformAdmin || effectiveUserData?.role === 'ADMIN'));
 
@@ -439,11 +442,12 @@ export default function App() {
     if (!user) return;
 
     getDoc(doc(db, 'settings', 'appearance')).then((snapshot) => {
-      const storedLogo = snapshot.data()?.logoURL;
-      if (storedLogo && !isLegacyDefaultLogo(storedLogo)) {
+      const appearance = snapshot.data();
+      const storedLogo = appearance?.logoURL;
+      if (appearance?.menuLogoVersion === MENU_LOGO_VERSION && storedLogo) {
         setLogoURL(storedLogo);
         localStorage.setItem('ohel_custom_logo', storedLogo);
-      } else if (isLegacyDefaultLogo(storedLogo)) {
+      } else {
         setLogoURL(defaultLogo);
         localStorage.setItem('ohel_custom_logo', defaultLogo);
       }
@@ -457,10 +461,14 @@ export default function App() {
 
     const appearanceRef = doc(db, 'settings', 'appearance');
     getDoc(appearanceRef).then((snapshot) => {
-      const storedLogo = snapshot.data()?.logoURL;
-      if (!storedLogo || isLegacyDefaultLogo(storedLogo) || storedLogo.includes('image/svg+xml')) {
+      const appearance = snapshot.data();
+      const storedLogo = appearance?.logoURL;
+      if (appearance?.menuLogoVersion !== MENU_LOGO_VERSION || !storedLogo || storedLogo.includes('image/svg+xml')) {
+        setLogoURL(defaultLogo);
+        localStorage.setItem('ohel_custom_logo', defaultLogo);
         return setDoc(appearanceRef, {
           logoURL: defaultLogo,
+          menuLogoVersion: MENU_LOGO_VERSION,
           updatedBy: user?.uid,
           updatedAt: Date.now(),
         }, { merge: true });
