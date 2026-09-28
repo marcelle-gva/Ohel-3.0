@@ -15,7 +15,7 @@ interface PillarCardProps {
 
 const PillarCard: React.FC<PillarCardProps> = ({ title, description, icon, color, onClick, disabled }) => (
   <motion.button
-    whileHover={!disabled ? { scale: 1.02, y: -4 } : {}}
+    whileHover={!disabled ? { scale: 1.02, y: -4, borderColor: color } : {}}
     whileTap={!disabled ? { scale: 0.98 } : {}}
     onClick={onClick}
     disabled={disabled}
@@ -37,7 +37,7 @@ const PillarCard: React.FC<PillarCardProps> = ({ title, description, icon, color
     </div>
 
     {!disabled ? (
-      <div className="flex items-center gap-2 text-primary font-bold text-sm mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-2 text-primary group-hover:text-[var(--pillar-color)] font-bold text-sm mt-4 opacity-0 group-hover:opacity-100 transition-colors">
         Acessar Módulo <ChevronRight className="w-4 h-4" />
       </div>
     ) : (

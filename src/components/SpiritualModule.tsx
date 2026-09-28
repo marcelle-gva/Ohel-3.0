@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { PILAR_CONFIG } from '@/config/permissions';
 
 interface SpiritualModuleProps {
   userId: string;
@@ -215,15 +216,24 @@ export const SpiritualModule: React.FC<SpiritualModuleProps> = ({ userId, onAddT
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center border" style={{ color: PILAR_CONFIG.ESPIRITUAL.cor, backgroundColor: `${PILAR_CONFIG.ESPIRITUAL.cor}1A`, borderColor: `${PILAR_CONFIG.ESPIRITUAL.cor}33` }}>
+          <Heart className="w-6 h-6" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold uppercase tracking-tight leading-none" style={{ color: PILAR_CONFIG.ESPIRITUAL.cor }}>Pilar Espiritual</h2>
+          <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-70">{PILAR_CONFIG.ESPIRITUAL.subtitulo}</p>
+        </div>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">
-          <Card className="bg-primary/5 border-primary/20 overflow-hidden relative">
+          <Card className="bg-red-500/5 border-red-500/20 overflow-hidden relative">
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <Quote className="w-24 h-24" />
             </div>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
+                <Sparkles className="w-5 h-5 text-red-500" />
                 Versículo do Dia
               </CardTitle>
               <CardDescription>Uma palavra para meditar hoje</CardDescription>
@@ -234,7 +244,7 @@ export const SpiritualModule: React.FC<SpiritualModuleProps> = ({ userId, onAddT
                   <blockquote className="text-xl font-serif italic text-foreground leading-relaxed">
                     "{verse.text.trim()}"
                   </blockquote>
-                  <div className="text-right font-bold text-primary">— {verse.reference}</div>
+                  <div className="text-right font-bold text-red-500">— {verse.reference}</div>
                 </>
               ) : (
                 <div className="h-24 flex items-center justify-center animate-pulse bg-muted rounded-lg" />
@@ -246,10 +256,10 @@ export const SpiritualModule: React.FC<SpiritualModuleProps> = ({ userId, onAddT
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-red-500/20 bg-red-500/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Heart className="w-5 h-5 text-pink-500" />
+                <Heart className="w-5 h-5 text-red-500" />
                 Meu Devocional
               </CardTitle>
               <CardDescription>O que Deus falou com você hoje?</CardDescription>
@@ -281,10 +291,10 @@ export const SpiritualModule: React.FC<SpiritualModuleProps> = ({ userId, onAddT
         </div>
 
         <div className="space-y-6">
-          <Card>
+          <Card className="border-red-500/20 bg-red-500/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-blue-500" />
+                <BookOpen className="w-5 h-5 text-red-500" />
                 Plano de Leitura
               </CardTitle>
               <CardDescription>Acompanhe sua jornada na Bíblia</CardDescription>
@@ -309,7 +319,7 @@ export const SpiritualModule: React.FC<SpiritualModuleProps> = ({ userId, onAddT
 
               <div className="space-y-4">
                 {readingPlans.map(plan => (
-                  <div key={plan.id} className="p-4 border rounded-xl space-y-3">
+                  <div key={plan.id} className="p-4 border border-red-500/15 bg-red-500/5 rounded-xl space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="font-bold">{plan.book}</h4>
                       <span className="text-xs text-muted-foreground">
@@ -346,7 +356,7 @@ export const SpiritualModule: React.FC<SpiritualModuleProps> = ({ userId, onAddT
                   </div>
                 ))}
                 {readingPlans.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-xl">
+                  <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-red-500/20 bg-red-500/5 rounded-xl">
                     Nenhum plano de leitura ativo
                   </div>
                 )}
@@ -354,7 +364,7 @@ export const SpiritualModule: React.FC<SpiritualModuleProps> = ({ userId, onAddT
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-red-500/20 bg-red-500/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-sm">
                 <History className="w-4 h-4" />
@@ -384,15 +394,15 @@ export const SpiritualModule: React.FC<SpiritualModuleProps> = ({ userId, onAddT
               </div>
             </CardContent>
           </Card>
-          <Card className="border-none shadow-none bg-transparent">
-            <CardHeader className="px-0">
+          <Card className="border border-red-500/20 bg-red-500/5 rounded-xl">
+            <CardHeader className="px-6 pt-6">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Sparkles className="w-5 h-5 text-amber-500" />
+                <Sparkles className="w-5 h-5 text-red-500" />
                 Metas Espirituais
               </CardTitle>
               <CardDescription>Objetivos para sua caminhada de fé</CardDescription>
             </CardHeader>
-            <CardContent className="px-0 space-y-4">
+            <CardContent className="px-6 pb-6 space-y-4">
               <div className="flex gap-2">
                 <input 
                   type="text"
