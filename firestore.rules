@@ -272,7 +272,7 @@ service cloud.firestore {
         // otherwise only someone who can already manage members may write.
         allow create: if isVerified() && (
           isPlatformAdmin() ||
-          request.auth.uid == memberId ||
+          (request.auth.uid == memberId && incoming().get('userId', request.auth.uid) == request.auth.uid) ||
           hasHouseholdPermission(householdId, 'MANAGE_MEMBERS')
         );
         allow update, delete: if isVerified() && (
@@ -363,10 +363,20 @@ service cloud.firestore {
         allow create: if isVerified() && (
           isPlatformAdmin() ||
           isAdminOf(institutionId) ||
-          (request.auth.uid == memberId && incoming().role == 'MEMBER')
+          (request.auth.uid == memberId &&
+           incoming().get('userId', request.auth.uid) == request.auth.uid &&
+           incoming().role == 'MEMBER')
         );
         allow update, delete: if isVerified() && (isPlatformAdmin() || isAdminOf(institutionId));
       }
+    }
+
+    // Collection-group membership switcher query: expose only the caller's
+    // active memberships, even when querying across all `members` subcollections.
+    match /{path=**}/members/{memberId} {
+      allow list: if isSignedIn() &&
+                  resource.data.get('userId', null) == request.auth.uid &&
+                  resource.data.get('status', null) == 'ACTIVE';
     }
 
     // Admins Collection

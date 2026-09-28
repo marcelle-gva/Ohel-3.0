@@ -34,6 +34,75 @@ interface PersonalModuleProps {
   addTask?: (data: any) => Promise<void>;
 }
 
+const MAX_ALBUM_IMAGE_SIZE = 700 * 1024;
+const MAX_SOURCE_IMAGE_SIZE = 20 * 1024 * 1024;
+
+const loadAlbumImage = (file: File): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+  const objectUrl = URL.createObjectURL(file);
+  const image = new Image();
+  image.onload = () => {
+    URL.revokeObjectURL(objectUrl);
+    resolve(image);
+  };
+  image.onerror = () => {
+    URL.revokeObjectURL(objectUrl);
+    reject(new Error('Não foi possível abrir a imagem. Tente enviar um arquivo JPG ou PNG.'));
+  };
+  image.src = objectUrl;
+});
+
+const prepareAlbumImage = async (file: File): Promise<string> => {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Selecione um arquivo de imagem para o álbum.');
+  }
+  if (file.size > MAX_SOURCE_IMAGE_SIZE) {
+    throw new Error('A imagem deve ter no máximo 20 MB antes do envio.');
+  }
+
+  const image = await loadAlbumImage(file);
+  const canvas = document.createElement('canvas');
+  let maxDimension = 1600;
+  let quality = 0.82;
+  let compressedImage: Blob | null = null;
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+    canvas.width = Math.round(image.naturalWidth * scale);
+    canvas.height = Math.round(image.naturalHeight * scale);
+
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Não foi possível preparar a imagem para o álbum.');
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    compressedImage = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/jpeg', quality);
+    });
+    if (!compressedImage) throw new Error('Não foi possível compactar a imagem.');
+    if (compressedImage.size <= MAX_ALBUM_IMAGE_SIZE) break;
+
+    if ((attempt + 1) % 4 === 0) {
+      maxDimension = Math.round(maxDimension * 0.75);
+      quality = 0.82;
+    } else {
+      quality = Math.max(0.5, quality - 0.1);
+    }
+  }
+
+  if (!compressedImage || compressedImage.size > MAX_ALBUM_IMAGE_SIZE) {
+    throw new Error('Não foi possível reduzir a imagem o suficiente. Tente uma foto menor.');
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') resolve(reader.result);
+      else reject(new Error('Não foi possível ler a imagem preparada.'));
+    };
+    reader.onerror = () => reject(new Error('Falha ao ler a imagem selecionada.'));
+    reader.readAsDataURL(compressedImage);
+  });
+};
+
 export const PersonalModule: React.FC<PersonalModuleProps> = ({ 
   userId, 
   activeTab: selectedTab,
@@ -46,6 +115,7 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
 }) => {
   const [events, setEvents] = useState<FamilyEvent[]>([]);
   const [photos, setPhotos] = useState<any[]>([]);
+  const [albumLoadError, setAlbumLoadError] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [localActiveTab, setLocalActiveTab] = useState('familiar');
   const activeTab = selectedTab ?? localActiveTab;
@@ -71,7 +141,12 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
     );
     const unsubAlbum = onSnapshot(pq, (snap) => {
       setPhotos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'personal_album'));
+      setAlbumLoadError(null);
+    }, (error) => {
+      const errorInfo = handleFirestoreError(error, OperationType.LIST, 'personal_album');
+      console.error('Falha ao carregar o álbum da família:', errorInfo.error);
+      setAlbumLoadError(errorInfo.error);
+    });
 
     return () => {
       unsubEvents();
@@ -150,27 +225,34 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
     try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64 = reader.result as string;
-        await addDoc(collection(db, 'personal_album'), {
-          userId,
-          url: base64,
-          createdAt: serverTimestamp()
-        });
-        toast.success('Foto adicionada ao álbum!');
-        setUploading(false);
-      };
-      reader.readAsDataURL(file);
+      const imageUrl = await prepareAlbumImage(file);
+      await addDoc(collection(db, 'personal_album'), {
+        userId,
+        url: imageUrl,
+        createdAt: serverTimestamp()
+      });
+      toast.success('Foto adicionada ao álbum!');
     } catch (error) {
-      console.error(error);
-      toast.error('Erro ao subir foto');
+      const code = (error as { code?: string })?.code;
+      if (code) handleFirestoreError(error, OperationType.CREATE, 'personal_album');
+      console.error('Falha ao adicionar foto ao álbum:', error);
+
+      if (code?.endsWith('permission-denied')) {
+        toast.error('Sem permissão para salvar. Confira se sua conta está verificada.');
+      } else if (code?.endsWith('resource-exhausted')) {
+        toast.error('A foto ainda está grande demais para salvar. Tente uma imagem menor.');
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Não foi possível adicionar a foto ao álbum.');
+      }
+    } finally {
       setUploading(false);
+      input.value = '';
     }
   };
 
@@ -419,7 +501,9 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
                 ))}
                 {photos.length === 0 && (
                   <div className="col-span-full py-12 text-center bg-purple-500/5 border-2 border-dashed border-purple-500/10 rounded-3xl">
-                   <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Álbum vazio. Adicione as primeiras fotos da sua família!</p>
+                   <p className="text-[10px] font-black uppercase tracking-widest opacity-60">
+                     {albumLoadError ? 'Não foi possível carregar as fotos. Confira a conexão e tente novamente.' : 'Álbum vazio. Adicione as primeiras fotos da sua família!'}
+                   </p>
                  </div>
                 )}
               </div>

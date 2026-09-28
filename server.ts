@@ -1441,11 +1441,10 @@ Sua resposta deve ser estritamente em formato JSON, seguindo exatamente este sch
       const email = req.auth!.email;
       const uid = req.auth!.uid;
 
-      const configuredAdmin = process.env.ADMIN_EMAIL;
-      if (!configuredAdmin) {
-        throw new Error('ADMIN_EMAIL is required in production.');
-      }
-      const isTargetAdmin = email === configuredAdmin;
+      const configuredAdmin = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+      const isTargetAdmin = Boolean(
+        configuredAdmin && email?.trim().toLowerCase() === configuredAdmin
+      );
 
       // Check Firestore users document if server DB available
       let targetUid = uid;
@@ -1501,13 +1500,14 @@ Sua resposta deve ser estritamente em formato JSON, seguindo exatamente este sch
           }
 
           try {
-            await db.collection('admins').doc(targetUid).set({
+            const adminRecord: Record<string, unknown> = {
               uid: targetUid,
-              email: email || configuredAdmin,
               role: 'ADMIN',
               isPlatformAdmin: true,
               updatedAt: admin.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
+            };
+            if (email || configuredAdmin) adminRecord.email = email || configuredAdmin;
+            await db.collection('admins').doc(targetUid).set(adminRecord, { merge: true });
           } catch (dbErr: any) {
             failures.push(`admins write failed: ${dbErr.message}`);
           }
