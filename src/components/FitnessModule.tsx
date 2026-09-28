@@ -54,6 +54,8 @@ import { motion, AnimatePresence } from 'motion/react';
 
 interface FitnessModuleProps {
   userId: string;
+  activeTab?: string;
+  onActiveTabChange?: (tab: string) => void;
 }
 
 const MENTAL_DUMP_PROMPTS = [
@@ -63,11 +65,13 @@ const MENTAL_DUMP_PROMPTS = [
   'Hoje acordei leve, motivada e focada para terminar minhas principais metas do dia!'
 ];
 
-export const FitnessModule: React.FC<FitnessModuleProps> = ({ userId }) => {
+export const FitnessModule: React.FC<FitnessModuleProps> = ({ userId, activeTab: selectedTab, onActiveTabChange }) => {
   const [habits, setHabits] = useState<FitnessHabit[]>([]);
   const [wellBeing, setWellBeing] = useState<WellBeingLog | null>(null);
   const [wellBeingHistory, setWellBeingHistory] = useState<WellBeingLog[]>([]);
-  const [activeTab, setActiveTab] = useState('habits');
+  const [localActiveTab, setLocalActiveTab] = useState('habits');
+  const activeTab = selectedTab ?? localActiveTab;
+  const setActiveTab = onActiveTabChange ?? setLocalActiveTab;
   const [mentalDumpSubTab, setMentalDumpSubTab] = useState<'current' | 'history'>('current');
   const [historyFilter, setHistoryFilter] = useState<'all' | 'anxiety' | 'overloaded' | 'exhausted' | 'positive'>('all');
   const [historySearch, setHistorySearch] = useState('');
@@ -1192,7 +1196,7 @@ export const FitnessModule: React.FC<FitnessModuleProps> = ({ userId }) => {
               onClick={() => setActiveTab('mental-dump')}
               className="rounded-xl text-xs font-black uppercase tracking-wider gap-2 shrink-0 self-end sm:self-auto"
             >
-              <span>Abrir Descarrego</span>
+              <span>ABRIR AGENTE OHEL</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Button>
           </Card>

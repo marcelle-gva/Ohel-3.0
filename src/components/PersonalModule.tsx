@@ -24,6 +24,8 @@ import { cn } from '@/lib/utils';
 
 interface PersonalModuleProps {
   userId: string;
+  activeTab?: string;
+  onActiveTabChange?: (tab: string) => void;
   tasks?: Task[];
   onTaskComplete?: (taskId: string, timeSpent: number) => void;
   onDeleteTask?: (taskId: string) => Promise<void>;
@@ -33,6 +35,8 @@ interface PersonalModuleProps {
 
 export const PersonalModule: React.FC<PersonalModuleProps> = ({ 
   userId, 
+  activeTab: selectedTab,
+  onActiveTabChange,
   tasks = [], 
   onTaskComplete,
   onDeleteTask,
@@ -42,7 +46,9 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
   const [events, setEvents] = useState<FamilyEvent[]>([]);
   const [photos, setPhotos] = useState<any[]>([]);
   const [title, setTitle] = useState('');
-  const [activeTab, setActiveTab] = useState('familiar');
+  const [localActiveTab, setLocalActiveTab] = useState('familiar');
+  const activeTab = selectedTab ?? localActiveTab;
+  const setActiveTab = onActiveTabChange ?? setLocalActiveTab;
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 

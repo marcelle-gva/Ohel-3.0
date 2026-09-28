@@ -103,25 +103,25 @@ export const PILAR_CONFIG: Record<
     cor: '#a855f7',
     label: 'Pilar Familiar',
     subtitulo: 'O coração da sua casa e memórias da sua família',
-    abas: ['Mural da Família', 'Álbum da Família'],
+    abas: ['Mural da Família', 'Álbum da Família', 'Finanças da Casa'],
   },
   PESSOAL: {
     cor: '#38bdf8',
     label: 'Pilar Pessoal',
     subtitulo: 'Descarrego mental com IA, humor, hábitos, alimentação e treinos',
-    abas: ['Hábitos & Saúde', 'Descarrego Mental & Humor IA', 'Cardápio & Calorias', 'Área Fitness'],
+    abas: ['Hábitos & Saúde', 'Cardápio & Calorias', 'Área Fitness'],
   },
   PROFISSIONAL: {
     cor: '#3b82f6',
     label: 'Pilar Profissional',
     subtitulo: 'Carreira, equipe e produtividade',
-    abas: ['Equipe & Usuários', 'Chat da Equipe', 'Grupos'],
+    abas: ['Equipe & Usuários', 'Chat da Equipe'],
   },
   ESPIRITUAL: {
     cor: '#ef4444',
     label: 'Pilar Espiritual',
     subtitulo: 'Metas espirituais, devocionais e propósito',
-    abas: ['Devocionais', 'Hábitos Espirituais', 'Rotina de Propósito'],
+    abas: [],
   },
 };
 
@@ -130,36 +130,31 @@ export const PILAR_TAB_CONFIG: Record<
   { defaultTab: string; tabs: { key: string; label: string }[] }
 > = {
   FAMILIAR: {
-    defaultTab: 'mural-familiar',
+    defaultTab: 'familiar',
     tabs: [
-      { key: 'mural-familiar', label: 'Mural da Família' },
-      { key: 'album-familiar', label: 'Álbum da Família' },
+      { key: 'familiar', label: 'Mural da Família' },
+      { key: 'album', label: 'Álbum da Família' },
+      { key: 'finance', label: 'Finanças da Casa' },
     ],
   },
   PESSOAL: {
-    defaultTab: 'habitos-saude',
+    defaultTab: 'habits',
     tabs: [
-      { key: 'habitos-saude', label: 'Hábitos & Saúde' },
-      { key: 'descarrego', label: 'Descarrego Mental & Humor IA' },
-      { key: 'cardapio', label: 'Cardápio & Calorias' },
+      { key: 'habits', label: 'Hábitos & Saúde' },
+      { key: 'menu', label: 'Cardápio & Calorias' },
       { key: 'fitness', label: 'Área Fitness' },
     ],
   },
   PROFISSIONAL: {
-    defaultTab: 'equipe',
+    defaultTab: 'team',
     tabs: [
-      { key: 'equipe', label: 'Equipe & Usuários' },
+      { key: 'team', label: 'Equipe & Usuários' },
       { key: 'chat', label: 'Chat da Equipe' },
-      { key: 'grupos', label: 'Grupos' },
     ],
   },
   ESPIRITUAL: {
-    defaultTab: 'devocionais',
-    tabs: [
-      { key: 'devocionais', label: 'Devocionais' },
-      { key: 'habitos-espirituais', label: 'Hábitos Espirituais' },
-      { key: 'proposito', label: 'Rotina de Propósito' },
-    ],
+    defaultTab: '',
+    tabs: [],
   },
 };
 

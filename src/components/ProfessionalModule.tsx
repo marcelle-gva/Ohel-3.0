@@ -30,11 +30,15 @@ interface ProfessionalModuleProps {
   userId: string;
   institutionId?: string;
   defaultTab?: string;
+  activeTab?: string;
+  onActiveTabChange?: (tab: string) => void;
 }
 
-export const ProfessionalModule: React.FC<ProfessionalModuleProps> = ({ userId, institutionId, defaultTab = 'team' }) => {
+export const ProfessionalModule: React.FC<ProfessionalModuleProps> = ({ userId, institutionId, defaultTab = 'team', activeTab: selectedTab, onActiveTabChange }) => {
   const [teamUsers, setTeamUsers] = useState<User[]>([]);
-  const [activeTab, setActiveTab] = useState(defaultTab);
+  const [localActiveTab, setLocalActiveTab] = useState(defaultTab);
+  const activeTab = selectedTab ?? localActiveTab;
+  const setActiveTab = onActiveTabChange ?? setLocalActiveTab;
 
   // Groups State
   const [groups, setGroups] = useState<UserGroup[]>([]);

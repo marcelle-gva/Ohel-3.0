@@ -130,6 +130,10 @@ import {
   canSeeVideoCall,
   MENU_RULES,
   canAccessView,
+  PILAR_CONFIG,
+  PILAR_TAB_CONFIG,
+  PILARES,
+  PILAR_VIEW_MAP,
   type UserContext,
 } from '@/config/permissions';
 import { BookOpen, Home, Activity, Briefcase, Calendar as CalendarIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, ShieldCheck, Video as VideoIcon, Sparkles, Globe } from 'lucide-react';
@@ -208,6 +212,7 @@ export default function App() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [activeQuadrant, setActiveQuadrant] = useState<EisenhowerQuadrant | undefined>();
   const [activeView, setActiveView] = useState<View>('dashboard');
+  const [pillarTabSelections, setPillarTabSelections] = useState<Record<string, string>>({});
   const [showConnectionsSettings, setShowConnectionsSettings] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
@@ -1416,6 +1421,53 @@ export default function App() {
     .filter((item) => (item.key ? MENU_RULES[item.key](userContext) : true))
     .map(({ id, label, icon, isNew }) => ({ id, label, icon, isNew }));
 
+  const activePillar = PILARES.find((pillar) => PILAR_VIEW_MAP[pillar] === activeView) || null;
+  const activePillarTabs = activePillar ? PILAR_TAB_CONFIG[activePillar].tabs : [];
+  const activePillarTab = activePillar
+    ? pillarTabSelections[activeView] || PILAR_TAB_CONFIG[activePillar].defaultTab
+    : '';
+
+  const updateActivePillarTab = (tab: string) => {
+    if (!activePillar) return;
+    setPillarTabSelections((current) => ({ ...current, [activeView]: tab }));
+  };
+
+  const renderPillarSubNavigation = (mobile = false) => {
+    if (!activePillar || activePillarTabs.length === 0 || (isSidebarCollapsed && !mobile)) return null;
+
+    const color = PILAR_CONFIG[activePillar].cor;
+    return (
+      <div className="px-3 py-3" aria-label={`Submenu ${PILAR_CONFIG[activePillar].label}`}>
+        <p className="mb-2 truncate px-2 text-[10px] font-black uppercase tracking-widest" style={{ color }}>
+          {PILAR_CONFIG[activePillar].label}
+        </p>
+        <div className="space-y-1 border-l pl-2" style={{ borderColor: `${color}66` }}>
+          {activePillarTabs.map((tab) => {
+            const isSelected = activePillarTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                aria-current={isSelected ? 'page' : undefined}
+                onClick={() => {
+                  updateActivePillarTab(tab.key);
+                  if (mobile) setIsMobileMenuOpen(false);
+                }}
+                className={cn(
+                  'w-full rounded-md px-3 py-2 text-left text-xs transition-colors',
+                  isSelected ? 'font-bold' : 'font-medium text-muted-foreground hover:text-foreground'
+                )}
+                style={isSelected ? { color, backgroundColor: `${color}1A` } : undefined}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <TooltipProvider>
       <div className="flex bg-background text-foreground min-h-screen relative overflow-x-hidden">
@@ -1439,10 +1491,9 @@ export default function App() {
             >
               <div className="p-6 flex items-center justify-between border-b">
                 <div className="flex items-center gap-3">
-                  <div className="bg-primary w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground font-bold">
-                    {logoURL ? <img src={logoURL} alt="Logo OHEL" className="w-full h-full object-cover" /> : 'O'}
+                  <div className="w-32 h-8 flex items-center justify-center shrink-0">
+                    {logoURL ? <img src={logoURL} alt="Logo OHEL" className="w-full h-full object-contain" /> : 'O'}
                   </div>
-                  <h1 className="text-xl font-bold tracking-tighter">OHEL</h1>
                 </div>
                 <Button variant="ghost" size="icon" aria-label="Fechar menu" onClick={() => setIsMobileMenuOpen(false)}>
                   <X className="w-5 h-5" />
@@ -1468,10 +1519,11 @@ export default function App() {
                       }}
                     >
                       <item.icon className={cn("w-5 h-5", isActive && "text-primary-foreground")} />
-                      <span className="font-semibold text-sm">{item.label}</span>
+                      <span className={cn('text-sm', isActive ? 'font-bold' : 'font-medium')}>{item.label}</span>
                     </Button>
                   );
                 })}
+                {renderPillarSubNavigation(true)}
               </nav>
 
               <div className="p-4 border-t space-y-2">
@@ -1509,11 +1561,11 @@ export default function App() {
         <div className={cn("p-6 flex flex-col gap-4", isSidebarCollapsed && "items-center px-0")}>
           <div className="flex items-center gap-3 relative group">
             <div className={cn(
-              "bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold shadow-lg shadow-primary/20 glow-blue overflow-hidden transition-all relative shrink-0",
-              isSidebarCollapsed ? "w-8 h-8" : "w-10 h-10"
+              "flex items-center justify-center overflow-hidden transition-all relative shrink-0",
+              isSidebarCollapsed ? "w-8 h-8" : "w-36 h-10"
             )}>
               {logoURL ? (
-                <img src={logoURL} alt="Logo OHEL" className="w-full h-full object-cover" />
+                <img src={logoURL} alt="Logo OHEL" className="w-full h-full object-contain" />
               ) : 'O'}
 
               {canEditBrandLogo && !isSidebarCollapsed && (
@@ -1544,12 +1596,6 @@ export default function App() {
                 </label>
               )}
             </div>
-            {!isSidebarCollapsed && (
-              <div className="animate-in fade-in duration-300">
-                <h1 className="text-xl font-bold tracking-tighter leading-none">OHEL</h1>
-                <p className="text-[10px] text-primary font-bold uppercase tracking-widest">SISTEMA DE GESTÃO</p>
-              </div>
-            )}
           </div>
         </div>
 
@@ -1603,6 +1649,7 @@ export default function App() {
 
             return content;
           })}
+          {renderPillarSubNavigation()}
         </nav>
 
         <div className={cn("p-4 border-t space-y-1", isSidebarCollapsed && "px-2")}>
@@ -2343,12 +2390,14 @@ export default function App() {
               ) : activeView === 'financeiro' ? (
                 <PersonalFinanceModule userId={user.uid} />
               ) : activeView === 'profissional' ? (
-                <ProfessionalModule userId={user.uid} institutionId={effectiveUser?.institutionId} defaultTab={professionalDefaultTab} />
+                <ProfessionalModule userId={user.uid} institutionId={effectiveUser?.institutionId} defaultTab={professionalDefaultTab} activeTab={activePillarTab || professionalDefaultTab} onActiveTabChange={updateActivePillarTab} />
               ) : activeView === 'pessoal' ? (
-                <FitnessModule userId={user.uid} />
+                <FitnessModule userId={user.uid} activeTab={activePillarTab || 'habits'} onActiveTabChange={updateActivePillarTab} />
               ) : activeView === 'familiar' ? (
                 <PersonalModule 
                   userId={user.uid} 
+                  activeTab={activePillarTab || 'familiar'}
+                  onActiveTabChange={updateActivePillarTab}
                   tasks={tasks.filter(t => t.moduleId === 'familiar')} 
                   onTaskComplete={handleTaskComplete} 
                   onDeleteTask={deleteTask}
