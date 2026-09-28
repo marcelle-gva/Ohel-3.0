@@ -1743,7 +1743,7 @@ export default function App() {
               title="Agente de Gestão OHEL"
             >
               <Sparkles className="w-3.5 h-3.5 animate-pulse text-primary" />
-              <span className="hidden sm:inline">Agente IA</span>
+              <span className="hidden sm:inline">ABRIR AGENTE OHEL</span>
             </Button>
 
             <NotificationBell userId={user.uid} onNavigate={setActiveView} />
