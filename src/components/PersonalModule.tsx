@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Users, Calendar, ClipboardList, Heart, Plus, Trash2, DollarSign, ArrowUpRight, ArrowDownRight, FileText, Image as ImageIcon, Target, LayoutDashboard, Clock, FileUp, Camera, Loader2 } from 'lucide-react';
+import { Users, Calendar, ClipboardList, Heart, Plus, Trash2, DollarSign, FileText, Image as ImageIcon, Target, LayoutDashboard, Clock, FileUp, Camera, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Dialog, 
@@ -52,12 +52,6 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  // Finance state
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [amount, setAmount] = useState('');
-  const [desc, setDesc] = useState('');
-  const [type, setType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
-
   useEffect(() => {
     if (!userId) return;
     const q = query(
@@ -68,16 +62,6 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
     const unsubEvents = onSnapshot(q, (snap) => {
       setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() } as FamilyEvent)));
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'personal_family'));
-
-    const fq = query(
-      collection(db, 'personal_finance'),
-      where('userId', '==', userId),
-      where('pillar', '==', 'casa'),
-      orderBy('date', 'desc')
-    );
-    const unsubFinance = onSnapshot(fq, (snap) => {
-      setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'personal_finance'));
 
     const pq = query(
       collection(db, 'personal_album'),
@@ -90,7 +74,6 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
 
     return () => {
       unsubEvents();
-      unsubFinance();
       unsubAlbum();
     };
   }, [userId]);
@@ -196,25 +179,6 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
       toast.success('Foto removida!');
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `personal_album/${id}`);
-    }
-  };
-
-  const handleAddTransaction = async () => {
-    if (!amount || !desc) return;
-    try {
-      await addDoc(collection(db, 'personal_finance'), {
-        userId,
-        amount: parseFloat(amount),
-        description: desc,
-        type,
-        pillar: 'casa',
-        date: serverTimestamp()
-      });
-      setAmount('');
-      setDesc('');
-      toast.success('Lançamento financeiro realizado!');
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'personal_finance');
     }
   };
 
@@ -347,11 +311,11 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
 
             {/* Side Column: Preview of Album & Quick Add */}
             <div className="lg:col-span-4 space-y-8 mt-4 md:mt-0">
-              <Card className="border-2 border-blue-500/10 shadow-xl shadow-blue-500/5 rounded-[32px] overflow-hidden bg-card/50">
-                <CardHeader className="flex flex-row items-center justify-between py-6 border-b bg-blue-500/5">
+              <Card className="border-2 border-purple-500/10 shadow-xl shadow-purple-500/5 rounded-[32px] overflow-hidden bg-purple-500/5">
+                <CardHeader className="flex flex-row items-center justify-between py-6 border-b bg-purple-500/5">
                   <div className="space-y-1">
                     <CardTitle className="text-sm font-black italic tracking-tighter uppercase flex items-center gap-2">
-                      <ImageIcon className="w-4 h-4 text-blue-500" />
+                      <ImageIcon className="w-4 h-4 text-purple-500" />
                       Álbum Familiar
                     </CardTitle>
                     <p className="text-[9px] font-bold uppercase tracking-widest opacity-60">Recordações Recentes</p>
@@ -379,40 +343,6 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
                 </CardContent>
               </Card>
 
-              {/* Recent Expenses Section (Making the finance subscription functional) */}
-              <Card className="border-2 border-emerald-500/10 shadow-xl shadow-emerald-500/5 rounded-[32px] overflow-hidden bg-card/50">
-                <CardHeader className="flex flex-row items-center justify-between py-6 border-b bg-emerald-500/5">
-                  <div className="space-y-1">
-                    <CardTitle className="text-[10px] uppercase font-black tracking-widest text-emerald-600 flex items-center gap-2">
-                      <DollarSign className="w-4 h-4" />
-                      Gastos da Casa
-                    </CardTitle>
-                    <p className="text-[9px] font-bold uppercase tracking-widest opacity-60">Recentes (Pilar Casa)</p>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    {transactions.slice(0, 3).map(tx => (
-                      <div key={tx.id} className="flex items-center justify-between p-2 bg-muted/20 rounded-xl border border-border/50">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-bold tracking-tight">{tx.description}</span>
-                          <span className="text-[8px] text-muted-foreground uppercase">{new Date(tx.date?.seconds * 1000).toLocaleDateString()}</span>
-                        </div>
-                        <span className={cn(
-                          "text-[10px] font-black tracking-tighter",
-                          tx.type === 'INCOME' ? "text-emerald-500" : "text-amber-500"
-                        )}>
-                          {tx.type === 'INCOME' ? '+' : '-'} R$ {tx.amount.toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                    {transactions.length === 0 && (
-                      <p className="text-[9px] text-center text-muted-foreground italic py-4">Nenhum gasto registrado.</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
               <Card className="border-2 border-amber-500/10 bg-amber-500/5 rounded-[32px]">
                 <CardHeader className="space-y-1">
                   <CardTitle className="text-[10px] uppercase font-black tracking-widest text-amber-600">Dica de Gestão</CardTitle>
@@ -428,11 +358,11 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
         </TabsContent>
 
         <TabsContent value="album" className="space-y-6">
-          <Card className="border-2 border-blue-500/10 shadow-xl shadow-blue-500/5 rounded-[32px] overflow-hidden">
+          <Card className="border-2 border-purple-500/10 shadow-xl shadow-purple-500/5 rounded-[32px] overflow-hidden bg-purple-500/5">
             <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b bg-muted/5">
               <div className="space-y-1">
                 <CardTitle className="text-xl font-black italic tracking-tighter uppercase flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-blue-500" />
+                  <ImageIcon className="w-5 h-5 text-purple-500" />
                   Álbum da Família
                 </CardTitle>
                 <CardDescription className="font-medium">Eternize os melhores momentos (Digital e Impresso)</CardDescription>
@@ -480,7 +410,7 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({
                   </div>
                 ))}
                 {photos.length === 0 && (
-                   <div className="col-span-full py-12 text-center bg-muted/5 border-2 border-dashed border-blue-500/10 rounded-3xl">
+                  <div className="col-span-full py-12 text-center bg-purple-500/5 border-2 border-dashed border-purple-500/10 rounded-3xl">
                    <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Álbum vazio. Adicione as primeiras fotos da sua família!</p>
                  </div>
                 )}
